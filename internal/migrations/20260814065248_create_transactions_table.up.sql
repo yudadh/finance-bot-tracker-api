@@ -1,0 +1,21 @@
+CREATE TABLE transactions (
+    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT UNSIGNED NOT NULL,
+    category_id BIGINT UNSIGNED NULL,
+    type ENUM ('income', 'expense') NOT NULL,
+    amount BIGINT NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'IDR',
+    description VARCHAR(500) NOT NULL,
+    transaction_date DATE NOT NULL,
+    source ENUM ('telegram', 'admin') NOT NULL DEFAULT 'telegram',
+    raw_text TEXT NULL,
+    parser_confidence DECIMAL(5, 4) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    CONSTRAINT fk_transactions_user FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT fk_transactions_category FOREIGN KEY (category_id) REFERENCES categories (id),
+    INDEX idx_transactions_user_date (user_id, transaction_date),
+    INDEX idx_transactions_type (type),
+    INDEX idx_transactions_deleted_at (deleted_at)
+) ENGINE = InnoDB;

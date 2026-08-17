@@ -1,0 +1,27 @@
+# Binaries / build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/dist/
+/build/
+
+# Coverage / profiling
+coverage.out
+*.cover
+*.prof
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Temporary files
+tmp/
+temp/
+.cache/
+.gocache/
