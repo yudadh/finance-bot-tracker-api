@@ -20,7 +20,7 @@ type ParserAttempt struct {
 	ParserType    ParserType      `gorm:"column:parser_type"`
 	Success       bool            `gorm:"column:success"`
 	Confidence    *float64        `gorm:"column:confidence"`
-	ParsedPayload *datatypes.JSON `gorm:"column:parser_payload;type:json"`
+	ParsedPayload *datatypes.JSON `gorm:"column:parsed_payload;type:json"`
 	ErrorMessage  *string         `gorm:"column:error_message"`
 	CreatedAt     time.Time       `gorm:"column:created_at;autoCreateTime"`
 	User          User            `gorm:"foreignKey:UserID;references:ID"`

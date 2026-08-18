@@ -29,7 +29,7 @@ type Transaction struct {
 	Currency         string            `gorm:"column:currency"`
 	Description      string            `gorm:"column:description"`
 	TransactionDate  time.Time         `gorm:"column:transaction_date"`
-	Source           TransactionSource `gorm:"column:transaction_source"`
+	Source           TransactionSource `gorm:"column:source"`
 	RawText          *string           `gorm:"column:raw_text"`
 	ParserConfidence *float64          `gorm:"column:parser_confidence"`
 	CreatedAt        time.Time         `gorm:"column:created_at;autoCreateTime"`
