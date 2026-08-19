@@ -8,27 +8,28 @@ import (
 
 type TransactionIntent struct {
 	Type            domain.TransactionType
-	Amount          uint64
+	Amount          int64
 	Currency        string
 	CategoryName    string
+	Description     string
 	TransactionDate time.Time
 	Confidence      float64
 }
 
 type TransactionParser interface {
-	Parser(input ParseInput) (*TransactionIntent, error)
+	Parse(input ParseInput) (*TransactionIntent, error)
 }
 
 type ParseInput struct {
-	Text string
-	Now time.Time
-	Timezone *time.Location
-	Currency string
+	Text       string
+	Now        time.Time
+	Timezone   *time.Location
+	Currency   string
 	Categories []CategoryRule
 }
 
 type CategoryRule struct {
-	Name string
-	Type domain.TransactionType
+	Name     string
+	Type     domain.TransactionType
 	Keywords []string
 }
