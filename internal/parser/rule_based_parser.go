@@ -34,9 +34,10 @@ func (p *RuleBasedParser) Parse(input ParseInput) (*TransactionIntent, error) {
 
 	return &TransactionIntent{
 		Type: transactionType,
-		Amount: uint64(amount),
+		Amount: amount,
 		Currency: input.Currency,
 		CategoryName: categoryName,
+		Description: description,
 		Confidence: confidence,
 	}, nil
 }
