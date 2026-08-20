@@ -38,6 +38,7 @@ func (p *RuleBasedParser) Parse(input ParseInput) (*TransactionIntent, error) {
 		Currency: input.Currency,
 		CategoryName: categoryName,
 		Description: description,
+		TransactionDate: parseSimpleDate(text, input.Now, input.Timezone),
 		Confidence: confidence,
 	}, nil
 }
