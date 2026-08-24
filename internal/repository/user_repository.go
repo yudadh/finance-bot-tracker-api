@@ -16,7 +16,8 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
-	return r.db.WithContext(ctx).Create(user).Error
+	err := r.db.WithContext(ctx).Create(user).Error
+	return translateError(err)
 }
 
 func (r *UserRepository) FindByID(ctx context.Context, id uint64) (*domain.User, error) {
@@ -29,13 +30,13 @@ func (r *UserRepository) FindByID(ctx context.Context, id uint64) (*domain.User,
 		Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
-	
+
 	return &user, err
 }
 
-func (r *UserRepository) FindByTelegramID(ctx context.Context, telegramId uint64) (*domain.User, error) {
+func (r *UserRepository) FindByTelegramID(ctx context.Context, telegramId int64) (*domain.User, error) {
 	var user domain.User
 
 	err := r.db.
@@ -45,12 +46,13 @@ func (r *UserRepository) FindByTelegramID(ctx context.Context, telegramId uint64
 		Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
-	
-	return &user, err 
+
+	return &user, err
 }
 
 func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
-	return r.db.WithContext(ctx).Save(user).Error
+	err := r.db.WithContext(ctx).Save(user).Error
+	return translateError(err)
 }

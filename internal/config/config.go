@@ -57,6 +57,7 @@ type AppConfig struct {
 	AppEnv string
 	AppPort string
 	AppName string
+	TelegramBotToken string
 }
 
 func NewAppConfig(config viper.Viper) AppConfig {
@@ -64,6 +65,7 @@ func NewAppConfig(config viper.Viper) AppConfig {
 		AppEnv: config.GetString("APP_ENV"),
 		AppPort: config.GetString("APP_PORT"),
 		AppName: config.GetString("APP_NAME"),
+		TelegramBotToken: config.GetString("TELEGRAM_BOT_TOKEN"),
 	}
 }
 

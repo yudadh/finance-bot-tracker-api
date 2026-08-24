@@ -11,7 +11,9 @@ import (
 
 func NewGormDB(config config.DatabaseConfig) *gorm.DB {
 	dsn := config.GormDSN()
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		TranslateError: true,
+	})
 	utils.PanicIfError(err)
 
 	sqlDb, err := db.DB()

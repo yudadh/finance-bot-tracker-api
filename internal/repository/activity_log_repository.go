@@ -16,7 +16,8 @@ func NewActivityLogRepository(db *gorm.DB) *ActivityLogRepository {
 }
 
 func (r *ActivityLogRepository) Create(ctx context.Context, activityLog *domain.ActivityLog) error {
-	return r.db.WithContext(ctx).Create(activityLog).Error
+	err := r.db.WithContext(ctx).Create(activityLog).Error
+	return translateError(err)
 }
 
 func (r *ActivityLogRepository) FindByID(ctx context.Context, id uint64) (*domain.ActivityLog, error) {
@@ -29,7 +30,7 @@ func (r *ActivityLogRepository) FindByID(ctx context.Context, id uint64) (*domai
 		Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return &activityLog, nil
@@ -46,7 +47,7 @@ func (r *ActivityLogRepository) FindAll(ctx context.Context, limit int, offset i
 		Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return activityLogs, nil

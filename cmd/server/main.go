@@ -23,11 +23,17 @@ func main() {
 	
 	appConfig := config.New(cfg)
 	log := logger.New(appConfig.App.AppEnv)
-	application := app.New(appConfig, log)
+	application, err := app.New(appConfig, log)
+	if err != nil {
+		os.Exit(1)
+	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- application.Run()
+		errCh <- application.Run(ctx)
 	}()
 
 	quit := make(chan os.Signal, 1)

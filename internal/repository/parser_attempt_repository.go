@@ -16,7 +16,8 @@ func NewParserAttemptRepository(db *gorm.DB) *ParserAttemptRepository {
 }
 
 func (r *ParserAttemptRepository) Create(ctx context.Context, parserAttempt *domain.ParserAttempt) error {
-	return r.db.WithContext(ctx).Create(parserAttempt).Error
+	err := r.db.WithContext(ctx).Create(parserAttempt).Error
+	return translateError(err)
 }
 
 func (r *ParserAttemptRepository) FindAll(ctx context.Context, limit int, offset int) ([]domain.ParserAttempt, error) {
@@ -30,7 +31,7 @@ func (r *ParserAttemptRepository) FindAll(ctx context.Context, limit int, offset
 		Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return parserAttempts, nil
