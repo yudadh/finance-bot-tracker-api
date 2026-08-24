@@ -53,6 +53,7 @@ func (s *UserService) FindOrCreate(
 		LastName: userInput.LastName,
 		LanguageCode: userInput.LanguageCode,
 		Timezone: "Asia/Makassar",
+		Status: domain.UserStatusActive,
 	}
 
 	err = s.userRepo.Create(ctx, user)

@@ -18,7 +18,7 @@ type User struct {
 	LastName         string        `gorm:"column:last_name"`
 	LanguageCode     string        `gorm:"column:language_code"`
 	Timezone         string        `gorm:"column:timezone"`
-	Status           UserStatus    `gorm:"column:status"`
+	Status           UserStatus    `gorm:"column:status;default:active"`
 	LastSeenAt       *time.Time    `gorm:"column:last_seen_at"`
 	CreatedAt        time.Time     `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt        time.Time     `gorm:"column:updated_at;autoCreateTime;autoUpdateTime"`
