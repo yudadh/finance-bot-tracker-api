@@ -17,11 +17,13 @@ func NewTransactionRepository(db *gorm.DB) *TransactionRepository {
 }
 
 func (r *TransactionRepository) Create(ctx context.Context, transaction *domain.Transaction) error {
-	return r.db.WithContext(ctx).Create(transaction).Error
+	err := r.db.WithContext(ctx).Create(transaction).Error
+	return translateError(err)
 }
 
 func (r *TransactionRepository) Update(ctx context.Context, transaction *domain.Transaction) error {
-	return r.db.WithContext(ctx).Save(transaction).Error
+	err := r.db.WithContext(ctx).Save(transaction).Error
+	return translateError(err)
 }
 
 func (r *TransactionRepository) FindByUserAndDateRange(
@@ -46,7 +48,7 @@ func (r *TransactionRepository) FindByUserAndDateRange(
 		Error
 	
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return transactions, nil
@@ -73,7 +75,7 @@ func (r *TransactionRepository) SumTransactionsByUserAndDateRange(
 		Error
 	
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return &total, nil

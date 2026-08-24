@@ -17,7 +17,8 @@ func NewBudgetRepository(db *gorm.DB) *BudgetRepository {
 }
 
 func (r *BudgetRepository) Create(ctx context.Context, budget *domain.Budget) error {
-	return r.db.WithContext(ctx).Create(budget).Error
+	err := r.db.WithContext(ctx).Create(budget).Error
+	return translateError(err)
 }
 
 func (r *BudgetRepository) FindByID(ctx context.Context, id uint64) (*domain.Budget, error) {
@@ -29,7 +30,7 @@ func (r *BudgetRepository) FindByID(ctx context.Context, id uint64) (*domain.Bud
 		First(&budget).Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return &budget, nil
@@ -46,7 +47,7 @@ func (r *BudgetRepository) FindByUserPeriod(ctx context.Context, userID uint64, 
 		First(&budget).Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return &budget, nil
@@ -62,13 +63,14 @@ func (r *BudgetRepository) FindAll(ctx context.Context, limit int, offset int) (
 		Find(&budgets).Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return budgets, nil
 }
 
 func (r *BudgetRepository) Update(ctx context.Context, budget *domain.Budget) error {
-	return r.db.WithContext(ctx).Save(budget).Error
+	err := r.db.WithContext(ctx).Save(budget).Error
+	return translateError(err)
 }
 

@@ -16,7 +16,8 @@ func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
 }
 
 func (r *CategoryRepository) Create(ctx context.Context, category *domain.Category) error {
-	return r.db.WithContext(ctx).Create(category).Error
+	err := r.db.WithContext(ctx).Create(category).Error
+	return translateError(err)
 }
 
 func (r *CategoryRepository) FindByID(ctx context.Context, id uint64) (*domain.Category, error) {
@@ -29,7 +30,7 @@ func (r *CategoryRepository) FindByID(ctx context.Context, id uint64) (*domain.C
 		Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return &category, nil
@@ -51,5 +52,6 @@ func (r *CategoryRepository) FindAll(ctx context.Context) ([]domain.Category, er
 }
 
 func (r *CategoryRepository) Delete(ctx context.Context, category *domain.Category) error {
-	return r.db.WithContext(ctx).Delete(category).Error
+	err := r.db.WithContext(ctx).Delete(category).Error
+	return translateError(err)
 }

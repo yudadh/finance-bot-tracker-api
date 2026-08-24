@@ -16,7 +16,8 @@ func NewUserAdminRepository(db *gorm.DB) *AdminUserRepository {
 }
 
 func (r *AdminUserRepository) Create(ctx context.Context, adminUser *domain.AdminUser) error {
-	return r.db.WithContext(ctx).Create(adminUser).Error
+	err := r.db.WithContext(ctx).Create(adminUser).Error
+	return translateError(err)
 }
 
 func (r *AdminUserRepository) FindByID(ctx context.Context, id uint64) (*domain.AdminUser, error) {
@@ -29,7 +30,7 @@ func (r *AdminUserRepository) FindByID(ctx context.Context, id uint64) (*domain.
 		Error
 
 	if err != nil {
-		return nil, err
+		return nil, translateError(err)
 	}
 
 	return &adminUser, nil
@@ -53,9 +54,11 @@ func (r *AdminUserRepository) FindAll(ctx context.Context, limit int, offset int
 }
 
 func (r *AdminUserRepository) Update(ctx context.Context, adminUser *domain.AdminUser) error {
-	return r.db.WithContext(ctx).Save(adminUser).Error
+	err := r.db.WithContext(ctx).Save(adminUser).Error
+	return translateError(err) 
 }
 
 func (r *AdminUserRepository) Delete(ctx context.Context, adminUser *domain.AdminUser) error {
-	return r.db.WithContext(ctx).Delete(adminUser).Error
+	err := r.db.WithContext(ctx).Delete(adminUser).Error
+	return translateError(err)
 }
