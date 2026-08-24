@@ -56,9 +56,6 @@ func (h *BotHandler) HandleUpdate(
 	case CommandHelp:
 		h.sendMessage(ctx, b, chatID, helpMessage())
 		return
-	case CommandUnknown:
-		h.sendMessage(ctx, b, chatID, unknownCommandMessage())
-		return
 	}
 
 	userInput := &service.FindOrCreateUserInput{
