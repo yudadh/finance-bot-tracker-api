@@ -34,6 +34,7 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	categoryRepository := repository.NewCategoryRepository(database)
 	parserAttempRepository := repository.NewParserAttemptRepository(database)
 	userRepository := repository.NewUserRepository(database)
+	budgetRepository := repository.NewBudgetRepository(database)
 
 	// parser
 	parser := parser.NewRuleBasedParser()
@@ -46,8 +47,9 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 		logger,
 	)
 	userService := service.NewUserService(userRepository, logger)
+	budgetService := service.NewBudgetService(budgetRepository, transactionRepository, logger)
 
-	botHandler := telegram.NewBotHandler(transactionService, userService, logger)
+	botHandler := telegram.NewBotHandler(transactionService, userService, budgetService, logger)
 	bot, err := telegram.NewBot(cfg.App.TelegramBotToken, botHandler, logger)
 	if err != nil {
 		return nil, err
