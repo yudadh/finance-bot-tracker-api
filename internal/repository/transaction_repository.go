@@ -69,7 +69,7 @@ func (r *TransactionRepository) SumTransactionsByUserAndDateRange(
 		Where("user_id = ?", userID).
 		Where("type = ?", transactionType).
 		Where("transaction_date >= ?", startDate).
-		Where("transaction_date <= ?", endDate).
+		Where("transaction_date < ?", endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&total).
 		Error
