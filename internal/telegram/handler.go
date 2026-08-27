@@ -24,6 +24,13 @@ type userFinderOrCreator interface {
 type budgetFinderAndCreator interface {
 	SetBudget(ctx context.Context, budgetInput service.CreateBudgetInput) (*service.CreateBudgetResult, error)
 	GetBudgetStatus(ctx context.Context, user service.BudgetStatusInput) (*service.BudgetStatus, error)
+	CheckBudgetAlert(ctx context.Context, input service.BudgetStatusInput) (*service.CheckBudgetAlertResult, error)
+	UpdateBudgetTimestamp(
+		ctx context.Context,
+		budgetID uint64,
+		threshold uint8,
+		now time.Time,
+	) error
 }
 
 type BotHandler struct {
@@ -58,8 +65,6 @@ func (h *BotHandler) HandleUpdate(
 
 	text := update.Message.Text
 	chatID := update.Message.Chat.ID
-
-	h.SendTimezoneSelection(ctx, b, chatID)
 
 	userInput := &service.FindOrCreateUserInput{
 		TelegramID:       update.Message.From.ID,
@@ -163,6 +168,41 @@ func (h *BotHandler) HandleUpdate(
 
 	h.sendMessage(ctx, b, chatID, transactionSavedMessage(result.Transaction, result.CategoryName))
 
+	if result.Transaction.Type != domain.TransactionTypeExpense {
+		return
+	}
+
+	loc, err := time.LoadLocation(user.Timezone)
+	if err != nil {
+		h.sendMessage(ctx, b, chatID, InternalErrorMessage())
+		return
+	}
+
+	for _, periodType := range []domain.BudgetPeriodType{
+		domain.BudgetPeriodTypeWeekly,
+		domain.BudgetPeriodTypeMonthly,
+	} {
+		result, err := h.budgetService.CheckBudgetAlert(ctx, service.BudgetStatusInput{
+			UserID: user.ID,
+			PeriodType: periodType,
+			Location: loc,
+		})
+
+		if err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				h.logger.Error("failed to check budget alert", "error", err)
+			}
+			continue
+		}
+
+		if result.ShouldAlert {
+			if err := h.sendMessage(ctx, b, chatID, budgetAlertMessage(result, periodType)); err == nil {
+				if err = h.budgetService.UpdateBudgetTimestamp(ctx, result.BudgetID, result.Threshold, time.Now()); err != nil {
+					h.logger.Error("failed to update budget alert timestamp", "error", err)
+				}
+			}
+		}
+	}
 }
 
 func (h *BotHandler) sendMessage(
@@ -170,7 +210,7 @@ func (h *BotHandler) sendMessage(
 	b *tgBot.Bot,
 	chatID int64,
 	text string,
-) {
+) error {
 	_, err := b.SendMessage(ctx, &tgBot.SendMessageParams{
 		ChatID: chatID,
 		Text:   text,
@@ -181,6 +221,8 @@ func (h *BotHandler) sendMessage(
 	if err != nil && h.logger != nil {
 		h.logger.Error("failed to send telegram message", "error", err)
 	}
+	
+	return err
 }
 
 const (

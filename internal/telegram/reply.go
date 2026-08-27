@@ -18,29 +18,31 @@ const (
 )
 
 func welcomeMessage() string {
-	return `Halo! selamat datang di berry finance tracker, kirim transaksi seperti: 
+	return `👋 Halo! Selamat datang di Berry Finance Tracker.
+
+💸 Kirim transaksi seperti:
 makan siang 25000`
 }
 
 func helpMessage() string {
-	return `Halo! 👋
-		Aku bisa bantu mencatat dan memantau keuangan kamu.
+	return `👋 Halo!
+Aku bisa bantu mencatat dan memantau keuangan kamu.
 
-		Command yang tersedia:
+📌 Command yang tersedia:
 
-		• start / mulai - Memulai bot
-		• help / bantuan - Melihat bantuan
-		• today / hari ini - Ringkasan hari ini
-		• month / bulan ini - Ringkasan bulan ini
-		• report / laporan - Laporan keuangan
-		• budget - Melihat budget
-		• setbudget [bulanan/monthly] [jumlah] - Mengatur budget bulanan
-		• setbudget [mingguan/weekly] [jumlah] - Mengatur budget mingguan
-		• info - Informasi tracker
-		• cancel / batal / batalkan - Membatalkan proses
+🚀 start / mulai - Memulai bot
+❓ help / bantuan - Melihat bantuan
+📅 today / hari ini - Ringkasan hari ini
+🗓️ month / bulan ini - Ringkasan bulan ini
+📊 report / laporan - Laporan keuangan
+🎯 budget - Melihat budget
+💰 setbudget [bulanan/monthly] [jumlah] - Mengatur budget bulanan
+💰 setbudget [mingguan/weekly] [jumlah] - Mengatur budget mingguan
+ℹ️ info - Informasi tracker
+❌ cancel / batal / batalkan - Membatalkan proses
 
-		Contoh:
-		setbudget 3000000`
+📝 Contoh:
+setbudget bulanan 3000000`
 }
 
 func transactionSavedMessage(transaction *domain.Transaction, categoryName string) string {
@@ -50,7 +52,7 @@ func transactionSavedMessage(transaction *domain.Transaction, categoryName strin
 	}
 
 	return fmt.Sprintf(
-		"Tersimpan: %s Rp%d untuk %s",
+		"✅ Transaksi tersimpan\n\n📌 Tipe: %s\n💸 Jumlah: Rp%d\n🏷️ Kategori: %s",
 		transaction.Type,
 		transaction.Amount,
 		category,
@@ -59,7 +61,7 @@ func transactionSavedMessage(transaction *domain.Transaction, categoryName strin
 
 func budgetStatusMessage(budgetStatus *service.BudgetStatus) string {
 	if budgetStatus == nil {
-		return "Budget belum ditemukan. Gunakan setbudget [jumlah] untuk mengatur budget bulanan."
+		return "⚠️ Budget belum ditemukan.\n\n💰 Gunakan setbudget [periode] [jumlah] untuk mengatur budget."
 	}
 
 	usedAmount := uint64(0)
@@ -76,23 +78,23 @@ func budgetStatusMessage(budgetStatus *service.BudgetStatus) string {
 	statusText := ""
 	if remainingAmount < 0 {
 		statusText = fmt.Sprintf(
-			"Melebihi budget: Rp%s",
+			"🚨 Status: Melebihi budget Rp%s",
 			formatIDR(uint64(-remainingAmount)),
 		)
 	} else {
 		statusText = fmt.Sprintf(
-			"Sisa budget: Rp%s",
+			"✅ Status: Sisa budget Rp%s",
 			formatIDR(uint64(remainingAmount)),
 		)
 	}
 
 	return fmt.Sprintf(
-		`Status Budget
+		`🎯 Status Budget
 
-Periode: %s - %s
-Budget: Rp%s
-Pengeluaran: Rp%s
-Terpakai: %.1f%%
+📅 Periode: %s - %s
+💰 Budget: Rp%s
+💸 Pengeluaran: Rp%s
+📊 Terpakai: %.1f%%
 %s`,
 		formatDate(budgetStatus.PeriodStart),
 		formatDate(budgetStatus.PeriodEnd.Add(-time.Nanosecond)),
@@ -105,15 +107,15 @@ Terpakai: %.1f%%
 
 func budgetCreatedMessage(budget *service.CreateBudgetResult) string {
 	if budget == nil {
-		return "Budget berhasil dibuat."
+		return "✅ Budget berhasil dibuat."
 	}
 
 	return fmt.Sprintf(
-		`Budget berhasil dibuat.
+		`✅ Budget berhasil dibuat
 
-Periode: %s
-Tanggal: %s - %s
-Jumlah: %s %s`,
+📌 Periode: %s
+📅 Tanggal: %s - %s
+💰 Jumlah: %s %s`,
 		formatBudgetPeriodType(budget.PeriodType),
 		formatDate(budget.PeriodStart),
 		formatDate(budget.PeriodEnd.Add(-time.Nanosecond)),
@@ -123,7 +125,44 @@ Jumlah: %s %s`,
 }
 
 func budgetAlreadyExistsMessage() string {
-	return "Budget untuk periode ini sudah ada. Ketik budget untuk melihat status budget kamu."
+	return "⚠️ Budget untuk periode ini sudah ada.\n\n🎯 Ketik budget untuk melihat status budget kamu."
+}
+
+func budgetAlertMessage(
+	budgetAlert *service.CheckBudgetAlertResult,
+	periodType domain.BudgetPeriodType,
+) string {
+	if budgetAlert == nil || !budgetAlert.ShouldAlert {
+		return ""
+	}
+
+	usedAmount := uint64(0)
+	if budgetAlert.TotalTransactionAmount > 0 {
+		usedAmount = uint64(budgetAlert.TotalTransactionAmount)
+	}
+
+	remainingAmount := int64(budgetAlert.BudgetAmount) - int64(usedAmount)
+	statusText := ""
+	if remainingAmount < 0 {
+		statusText = fmt.Sprintf("🚨 Status: Budget terlewati Rp%s.", formatIDR(uint64(-remainingAmount)))
+	} else {
+		statusText = fmt.Sprintf("✅ Status: Sisa budget Rp%s.", formatIDR(uint64(remainingAmount)))
+	}
+
+	return fmt.Sprintf(
+		`⚠️ Reminder Budget %s
+
+📊 Pemakaian: %d%% dari budget %s
+🎯 Budget: Rp%s
+💸 Pengeluaran: Rp%s
+%s`,
+		formatBudgetPeriodType(periodType),
+		budgetAlert.UsedPercentage,
+		formatBudgetPeriodType(periodType),
+		formatIDR(budgetAlert.BudgetAmount),
+		formatIDR(usedAmount),
+		statusText,
+	)
 }
 
 func formatBudgetPeriodType(periodType domain.BudgetPeriodType) string {
@@ -163,16 +202,16 @@ func formatIDR(amount uint64) string {
 }
 
 func InternalErrorMessage() string {
-	return "Mohon maaf sedang terjadi masalah, coba beberapa saat lagi"
+	return "🚧 Mohon maaf, sedang terjadi masalah.\n\n🔄 Coba beberapa saat lagi."
 }
 
 func parseErrorMessage(cmdType CmdType) string {
 	switch cmdType {
 	case CmdTypeTransaction:
-		return "Maaf, saya belum bisa membaca transaksi itu. Coba format seperti: makan siang 25000"
+		return "⚠️ Maaf, saya belum bisa membaca transaksi itu.\n\n💸 Coba format seperti:\nmakan siang 25000"
 
 	case CmdTypeBudget:
-		return "Maaf, saya belum bisa membaca transaksi itu. Coba format seperti: setbudget bulanan 1000000. Pilihan periode mingguan/bulanan"
+		return "⚠️ Maaf, saya belum bisa membaca budget itu.\n\n💰 Coba format seperti:\nsetbudget bulanan 1000000\n\n📌 Pilihan periode: mingguan / bulanan"
 
 	default:
 		return ""
@@ -180,5 +219,7 @@ func parseErrorMessage(cmdType CmdType) string {
 }
 
 func unknownCommandMessage() string {
-	return `Maaf perintah tidak diketahui, ketik "help" untuk mengecek list perintah`
+	return `❓ Maaf, perintah tidak diketahui.
+
+📌 Ketik "help" untuk melihat daftar perintah.`
 }

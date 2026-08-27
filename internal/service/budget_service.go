@@ -89,6 +89,10 @@ func setBudgetWindow(
 	loc *time.Location,
 	periodType domain.BudgetPeriodType,
 ) (time.Time, time.Time) {
+	if loc == nil {
+		loc = time.Local
+	}
+
 	current := now.In(loc)
 
 	var startDate time.Time
@@ -100,7 +104,10 @@ func setBudgetWindow(
 		endDate = startDate.AddDate(0, 1, 0)
 
 	case domain.BudgetPeriodTypeWeekly:
-		day := int(now.Weekday())
+		day := int(current.Weekday())
+		if day == 0 {
+			day = 7
+		}
 
 		start := current.AddDate(0, 0, -(day - 1))
 		startDate = time.Date(
@@ -148,7 +155,7 @@ func (s *BudgetService) SetBudget(
 	return &CreateBudgetResult{
 		UserID:      budget.UserID,
 		PeriodType:  budget.PeriodType,
-		PeriodStart: budget.PeriodStart,
+		PeriodStart: startDate,
 		PeriodEnd:   endDate,
 		Amount:      budget.Amount,
 		Currency:    budget.Currency,
@@ -234,6 +241,7 @@ func (s *BudgetService) CheckBudgetAlert(
 
 	if usedPercentage >= 100 {
 		return &CheckBudgetAlertResult{
+			BudgetID:               budget.ID,
 			TotalTransactionAmount: *totalTransactionAmount,
 			BudgetAmount:           budget.Amount,
 			UsedPercentage:         usedPercentage,
@@ -244,6 +252,7 @@ func (s *BudgetService) CheckBudgetAlert(
 
 	if usedPercentage >= 80 && budget.Alert80SentAt == nil {
 		return &CheckBudgetAlertResult{
+			BudgetID:               budget.ID,
 			TotalTransactionAmount: *totalTransactionAmount,
 			BudgetAmount:           budget.Amount,
 			UsedPercentage:         usedPercentage,
