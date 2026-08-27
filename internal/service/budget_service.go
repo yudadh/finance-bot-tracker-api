@@ -89,6 +89,10 @@ func setBudgetWindow(
 	loc *time.Location,
 	periodType domain.BudgetPeriodType,
 ) (time.Time, time.Time) {
+	if loc == nil {
+		loc = time.Local
+	}
+	
 	current := now.In(loc)
 
 	var startDate time.Time
