@@ -104,7 +104,10 @@ func setBudgetWindow(
 		endDate = startDate.AddDate(0, 1, 0)
 
 	case domain.BudgetPeriodTypeWeekly:
-		day := int(now.Weekday())
+		day := int(current.Weekday())
+		if day == 0 {
+			day = 7
+		}
 
 		start := current.AddDate(0, 0, -(day - 1))
 		startDate = time.Date(
@@ -152,7 +155,7 @@ func (s *BudgetService) SetBudget(
 	return &CreateBudgetResult{
 		UserID:      budget.UserID,
 		PeriodType:  budget.PeriodType,
-		PeriodStart: budget.PeriodStart,
+		PeriodStart: startDate,
 		PeriodEnd:   endDate,
 		Amount:      budget.Amount,
 		Currency:    budget.Currency,
