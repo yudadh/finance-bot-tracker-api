@@ -24,6 +24,13 @@ type userFinderOrCreator interface {
 type budgetFinderAndCreator interface {
 	SetBudget(ctx context.Context, budgetInput service.CreateBudgetInput) (*service.CreateBudgetResult, error)
 	GetBudgetStatus(ctx context.Context, user service.BudgetStatusInput) (*service.BudgetStatus, error)
+	CheckBudgetAlert(ctx context.Context, input service.BudgetStatusInput) (*service.CheckBudgetAlertResult, error)
+	UpdateBudgetTimestamp(
+		ctx context.Context,
+		budgetID uint64,
+		threshold uint8,
+		now time.Time,
+	) error
 }
 
 type BotHandler struct {
@@ -170,7 +177,7 @@ func (h *BotHandler) sendMessage(
 	b *tgBot.Bot,
 	chatID int64,
 	text string,
-) {
+) error {
 	_, err := b.SendMessage(ctx, &tgBot.SendMessageParams{
 		ChatID: chatID,
 		Text:   text,
@@ -181,6 +188,8 @@ func (h *BotHandler) sendMessage(
 	if err != nil && h.logger != nil {
 		h.logger.Error("failed to send telegram message", "error", err)
 	}
+	
+	return err
 }
 
 const (
