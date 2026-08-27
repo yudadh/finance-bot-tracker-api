@@ -16,7 +16,13 @@ func NewBudgetRepository(db *gorm.DB) *BudgetRepository {
 	return &BudgetRepository{db: db}
 }
 
+func budgetPeriodDate(period time.Time) time.Time {
+	return time.Date(period.Year(), period.Month(), period.Day(), 0, 0, 0, 0, time.UTC)
+}
+
 func (r *BudgetRepository) Create(ctx context.Context, budget *domain.Budget) error {
+	budget.PeriodStart = budgetPeriodDate(budget.PeriodStart)
+
 	err := r.db.WithContext(ctx).Create(budget).Error
 	return translateError(err)
 }
@@ -38,12 +44,13 @@ func (r *BudgetRepository) FindByID(ctx context.Context, id uint64) (*domain.Bud
 
 func (r *BudgetRepository) FindByUserPeriod(ctx context.Context, userID uint64, period time.Time, periodType domain.BudgetPeriodType) (*domain.Budget, error) {
 	var budget domain.Budget
+	periodDate := budgetPeriodDate(period)
 
 	err := r.db.
 		WithContext(ctx).
 		Where("user_id = ?", userID).
 		Where("period_type = ?", periodType).
-		Where("period_start = ?", period).
+		Where("period_start = ?", periodDate).
 		First(&budget).Error
 
 	if err != nil {
@@ -70,7 +77,8 @@ func (r *BudgetRepository) FindAll(ctx context.Context, limit int, offset int) (
 }
 
 func (r *BudgetRepository) Update(ctx context.Context, budget *domain.Budget) error {
+	budget.PeriodStart = budgetPeriodDate(budget.PeriodStart)
+
 	err := r.db.WithContext(ctx).Save(budget).Error
 	return translateError(err)
 }
-
