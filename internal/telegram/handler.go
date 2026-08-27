@@ -66,8 +66,6 @@ func (h *BotHandler) HandleUpdate(
 	text := update.Message.Text
 	chatID := update.Message.Chat.ID
 
-	h.SendTimezoneSelection(ctx, b, chatID)
-
 	userInput := &service.FindOrCreateUserInput{
 		TelegramID:       update.Message.From.ID,
 		TelegramUsername: update.Message.From.Username,
@@ -170,6 +168,41 @@ func (h *BotHandler) HandleUpdate(
 
 	h.sendMessage(ctx, b, chatID, transactionSavedMessage(result.Transaction, result.CategoryName))
 
+	if result.Transaction.Type != domain.TransactionTypeExpense {
+		return
+	}
+
+	loc, err := time.LoadLocation(user.Timezone)
+	if err != nil {
+		h.sendMessage(ctx, b, chatID, InternalErrorMessage())
+		return
+	}
+
+	for _, periodType := range []domain.BudgetPeriodType{
+		domain.BudgetPeriodTypeWeekly,
+		domain.BudgetPeriodTypeMonthly,
+	} {
+		result, err := h.budgetService.CheckBudgetAlert(ctx, service.BudgetStatusInput{
+			UserID: user.ID,
+			PeriodType: periodType,
+			Location: loc,
+		})
+
+		if err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				h.logger.Error("failed to check budget alert", "error", err)
+			}
+			continue
+		}
+
+		if result.ShouldAlert {
+			if err := h.sendMessage(ctx, b, chatID, budgetAlertMessage(result, periodType)); err == nil {
+				if err = h.budgetService.UpdateBudgetTimestamp(ctx, result.BudgetID, result.Threshold, time.Now()); err != nil {
+					h.logger.Error("failed to update budget alert timestamp", "error", err)
+				}
+			}
+		}
+	}
 }
 
 func (h *BotHandler) sendMessage(
