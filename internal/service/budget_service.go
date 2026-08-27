@@ -92,7 +92,7 @@ func setBudgetWindow(
 	if loc == nil {
 		loc = time.Local
 	}
-	
+
 	current := now.In(loc)
 
 	var startDate time.Time
@@ -238,6 +238,7 @@ func (s *BudgetService) CheckBudgetAlert(
 
 	if usedPercentage >= 100 {
 		return &CheckBudgetAlertResult{
+			BudgetID:               budget.ID,
 			TotalTransactionAmount: *totalTransactionAmount,
 			BudgetAmount:           budget.Amount,
 			UsedPercentage:         usedPercentage,
@@ -248,6 +249,7 @@ func (s *BudgetService) CheckBudgetAlert(
 
 	if usedPercentage >= 80 && budget.Alert80SentAt == nil {
 		return &CheckBudgetAlertResult{
+			BudgetID:               budget.ID,
 			TotalTransactionAmount: *totalTransactionAmount,
 			BudgetAmount:           budget.Amount,
 			UsedPercentage:         usedPercentage,
