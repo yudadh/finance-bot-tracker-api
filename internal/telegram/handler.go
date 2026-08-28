@@ -119,6 +119,11 @@ func (h *BotHandler) HandleUpdate(
 				return
 			}
 
+			if errors.Is(err, parser.ErrAmountMustBePositive) {
+				h.sendMessage(ctx, b, chatID, parseErrorAmountMessage(CmdTypeBudget))
+				return
+			}
+
 			h.sendMessage(ctx, b, chatID, InternalErrorMessage())
 			return
 		}
