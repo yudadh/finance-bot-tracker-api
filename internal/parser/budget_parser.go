@@ -29,6 +29,10 @@ func ParseBudget(text string) (*ParseBudgetResult, error) {
 		return nil, err
 	}
 
+	if amount <= 0 {
+		return nil, ErrAmountMustBePositive
+	}
+
 	var periodType domain.BudgetPeriodType
 
 	switch match[1] {

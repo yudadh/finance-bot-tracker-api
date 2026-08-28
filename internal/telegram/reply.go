@@ -218,6 +218,19 @@ func parseErrorMessage(cmdType CmdType) string {
 	}
 }
 
+func parseErrorAmountMessage(cmdType CmdType) string {
+	switch cmdType {
+	case CmdTypeTransaction:
+		return "⚠️ Maaf, nominal transaksi harus lebih dari 0.\n\n💸 Coba format seperti:\nmakan siang 25000"
+		
+	case CmdTypeBudget:
+		return "⚠️ Maaf, nominal budget harus lebih dari 0.\n\n💰 Coba format seperti:\nsetbudget bulanan 1000000\n\n📌 Pilihan periode: mingguan / bulanan"
+	
+	default:
+		return ""
+	}
+}
+
 func unknownCommandMessage() string {
 	return `❓ Maaf, perintah tidak diketahui.
 
