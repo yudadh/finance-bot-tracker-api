@@ -11,7 +11,7 @@ type AdminUserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserAdminRepository(db *gorm.DB) *AdminUserRepository {
+func NewAdminUserRepository(db *gorm.DB) *AdminUserRepository {
 	return &AdminUserRepository{db: db}
 }
 
