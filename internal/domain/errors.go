@@ -7,4 +7,5 @@ var (
 	ErrAlreadyExists = errors.New("already exists")
 	ErrInvalidInput = errors.New("invalid input")
 	ErrConflict = errors.New("conflict")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
