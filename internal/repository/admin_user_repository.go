@@ -11,7 +11,7 @@ type AdminUserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserAdminRepository(db *gorm.DB) *AdminUserRepository {
+func NewAdminUserRepository(db *gorm.DB) *AdminUserRepository {
 	return &AdminUserRepository{db: db}
 }
 
@@ -26,6 +26,22 @@ func (r *AdminUserRepository) FindByID(ctx context.Context, id uint64) (*domain.
 	err := r.db.
 		WithContext(ctx).
 		Where("id = ?", id).
+		First(&adminUser).
+		Error
+
+	if err != nil {
+		return nil, translateError(err)
+	}
+
+	return &adminUser, nil
+}
+
+func (r *AdminUserRepository) FindByEmail(ctx context.Context, email string) (*domain.AdminUser, error) {
+	var adminUser domain.AdminUser
+
+	err := r.db.
+		WithContext(ctx).
+		Where("email = ?", email).
 		First(&adminUser).
 		Error
 
