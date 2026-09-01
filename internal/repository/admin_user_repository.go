@@ -36,6 +36,22 @@ func (r *AdminUserRepository) FindByID(ctx context.Context, id uint64) (*domain.
 	return &adminUser, nil
 }
 
+func (r *AdminUserRepository) FindByEmail(ctx context.Context, email string) (*domain.AdminUser, error) {
+	var adminUser domain.AdminUser
+
+	err := r.db.
+		WithContext(ctx).
+		Where("email = ?", email).
+		First(&adminUser).
+		Error
+
+	if err != nil {
+		return nil, translateError(err)
+	}
+
+	return &adminUser, nil
+}
+
 func (r *AdminUserRepository) FindAll(ctx context.Context, limit int, offset int) ([]domain.AdminUser, error) {
 	var adminUsers []domain.AdminUser
 
