@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -53,11 +54,18 @@ func (c *DatabaseConfig) GormDSN() string {
 	)
 }
 
+type JWTConfig struct {
+	Secret string
+	Issuer string
+	TTL time.Duration
+}
+
 type AppConfig struct {
 	AppEnv string
 	AppPort string
 	AppName string
 	TelegramBotToken string
+	JWT JWTConfig
 }
 
 func NewAppConfig(config viper.Viper) AppConfig {
@@ -66,6 +74,11 @@ func NewAppConfig(config viper.Viper) AppConfig {
 		AppPort: config.GetString("APP_PORT"),
 		AppName: config.GetString("APP_NAME"),
 		TelegramBotToken: config.GetString("TELEGRAM_BOT_TOKEN"),
+		JWT: JWTConfig{
+			Secret: config.GetString("JWT_SECRET"),
+			Issuer: config.GetString("JWT_ISSUER"),
+			TTL: config.GetDuration("JWT_TTL"),
+		},
 	}
 }
 
