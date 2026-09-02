@@ -27,18 +27,18 @@ type App struct {
 
 func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	database := database.NewGormDB(cfg.Database)
-	router := appHttp.NewRouter(cfg.App)
-
+	
 	// repository
 	transactionRepository := repository.NewTransactionRepository(database)
 	categoryRepository := repository.NewCategoryRepository(database)
 	parserAttempRepository := repository.NewParserAttemptRepository(database)
 	userRepository := repository.NewUserRepository(database)
 	budgetRepository := repository.NewBudgetRepository(database)
-
+	adminUserRepository := repository.NewAdminUserRepository(database)
+	
 	// parser
 	parser := parser.NewRuleBasedParser()
-
+	
 	transactionService := service.NewTransactionService(
 		transactionRepository,
 		categoryRepository,
@@ -48,7 +48,9 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	)
 	userService := service.NewUserService(userRepository, logger)
 	budgetService := service.NewBudgetService(budgetRepository, transactionRepository, logger)
-
+	adminUserService := service.NewAdminUserService(adminUserRepository, cfg.App.JWT)
+	
+	router := appHttp.NewRouter(cfg.App, adminUserService, logger)
 	botHandler := telegram.NewBotHandler(transactionService, userService, budgetService, logger)
 	bot, err := telegram.NewBot(cfg.App.TelegramBotToken, botHandler, logger)
 	if err != nil {
