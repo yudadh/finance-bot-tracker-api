@@ -27,7 +27,7 @@ func HandleError(c *gin.Context, err error) {
 	switch {
 	case errors.As(err, &validationErrors):
 		errors := ParseValidationErrors(validationErrors)
-		ResponseError(c, http.StatusBadRequest, "validation failed", errors)
+		ResponseError(c, http.StatusUnprocessableEntity, "validation failed", errors)
 
 	case errors.Is(err, domain.ErrInvalidCredentials):
 		ResponseError(c, http.StatusUnauthorized, "invalid email or password", nil)

@@ -36,12 +36,17 @@ func GenerateAdminToken(cfg config.JWTConfig, adminUserID uint64, email string) 
 }
 
 func ParseAdminToken(cfg config.JWTConfig, jwtToken string) (*AdminClaims, error) {
-	token, err := jwt.ParseWithClaims(jwtToken, &AdminClaims{}, func(t *jwt.Token) (any, error) {
-		if t.Method != jwt.SigningMethodHS256 {
-			return nil, ErrInvalidSigningMethod
-		}
-		return []byte(cfg.Secret), nil
-	})
+	token, err := jwt.ParseWithClaims(
+		jwtToken, 
+		&AdminClaims{}, 
+		func(t *jwt.Token) (any, error) {
+			if t.Method != jwt.SigningMethodHS256 {
+				return nil, ErrInvalidSigningMethod
+			}
+			return []byte(cfg.Secret), nil
+		},
+		jwt.WithIssuer(cfg.Issuer),
+	)
 
 	if err != nil {
 		return nil, err
