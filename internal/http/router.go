@@ -29,7 +29,7 @@ func NewRouter(
 	{	
 		api.POST("/admin/login", handler.Handle(logger, userAdminHandler.Login))
 		admin := api.Group("/admin")
-		admin.Use(middleware.AdminAuth(cfg.JWT))
+		admin.Use(middleware.AdminAuth(cfg.JWT, userAdminService, logger))
 		{
 			admin.GET("/me", handler.Handle(logger, userAdminHandler.GetMe))
 		}
