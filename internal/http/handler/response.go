@@ -9,10 +9,10 @@ import (
 
 type HandlerFunc func(c *gin.Context) error
 
-type Response struct {
+type Response[T any] struct {
 	Error   bool   `json:"error"`
 	Message string `json:"message"`
-	Data    any    `json:"data"`
+	Data    T    `json:"data"`
 }
 
 func Handle(logger *slog.Logger, fn HandlerFunc) gin.HandlerFunc {
@@ -33,8 +33,13 @@ func Handle(logger *slog.Logger, fn HandlerFunc) gin.HandlerFunc {
 	}
 }
 
-func ResponseSuccess(c *gin.Context, statusCode int, message string, data any) {
-	c.JSON(statusCode, Response{
+func ResponseSuccess[T any](
+	c *gin.Context, 
+	statusCode int, 
+	message string, 
+	data T,
+) {
+	c.JSON(statusCode, Response[T]{
 		Error:   false,
 		Message: message,
 		Data:    data,
