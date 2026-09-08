@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/yudadh/finance-bot-tracker-api/internal/pagination"
 	"github.com/yudadh/finance-bot-tracker-api/internal/service"
 )
 
@@ -16,14 +17,24 @@ type UserAdminService interface {
 	FindByID(ctx context.Context, id uint64) (*service.FindByIDResult, error)
 }
 
+type UserService interface {
+	FindAll(ctx context.Context, query service.FindAllUsersQuery) ([]service.FindAllUserResult, *pagination.Meta, error)
+}
+
 type UserAdminHandler struct {
 	userAdminService UserAdminService
+	userService UserService
 	logger *slog.Logger
 }
 
-func NewUserAdminHandler(userAdminService UserAdminService, logger *slog.Logger) *UserAdminHandler {
+func NewUserAdminHandler(
+	userAdminService UserAdminService,
+	userService UserService, 
+	logger *slog.Logger,
+) *UserAdminHandler {
 	return &UserAdminHandler{
 		userAdminService: userAdminService,
+		userService: userService,
 		logger: logger,
 	}
 }
@@ -93,5 +104,45 @@ func (h *UserAdminHandler) GetMe(c *gin.Context) error {
 		Name: result.Name,
 		Status: string(result.Status),
 	})
+	return nil
+}
+
+func (h *UserAdminHandler) GetAllUsers(c *gin.Context) error {
+	var query ListUsersQuery
+
+	if err := c.ShouldBindQuery(&query); err != nil {
+		return err
+	}
+
+	params := pagination.Params{
+		Page: query.Page,
+		PerPage: query.PerPage,
+	}.Normalize()
+
+	results, paginationMeta, err := h.userService.FindAll(c.Request.Context(), service.FindAllUsersQuery{
+		Param: params,
+		Status: query.Status,
+		Search: query.Search,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	data := []ListUsersResponse{}
+
+	for _, res := range results {
+		data = append(data, ListUsersResponse{
+			ID: res.ID,
+			TelegramID: res.TelegramID,
+			TelegramUsername: res.TelegramUsername,
+			FirstName: res.FirstName,
+			LastName: res.LastName,
+			Timezone: res.Timezone,
+			LanguageCode: res.LanguageCode,
+		})
+	}
+	
+	ResponseSuccessWithMeta(c, http.StatusOK, "users successfully fetched", data, paginationMeta)
 	return nil
 }
