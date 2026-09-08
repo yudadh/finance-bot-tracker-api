@@ -23,33 +23,33 @@ type UserService interface {
 
 type UserAdminHandler struct {
 	userAdminService UserAdminService
-	userService UserService
-	logger *slog.Logger
+	userService      UserService
+	logger           *slog.Logger
 }
 
 func NewUserAdminHandler(
 	userAdminService UserAdminService,
-	userService UserService, 
+	userService UserService,
 	logger *slog.Logger,
 ) *UserAdminHandler {
 	return &UserAdminHandler{
 		userAdminService: userAdminService,
-		userService: userService,
-		logger: logger,
+		userService:      userService,
+		logger:           logger,
 	}
 }
 
 func (h *UserAdminHandler) Register(c *gin.Context) error {
 	var request RegisterAdminUserRequest
-	
+
 	if err := c.ShouldBindJSON(&request); err != nil {
 		return err
 	}
-	
+
 	adminUser := service.RegisterAdminUserInput{
-		Email: request.Email,
+		Email:    request.Email,
 		Password: request.Password,
-		Name: request.Name,
+		Name:     request.Name,
 	}
 
 	result, err := h.userAdminService.Register(c.Request.Context(), adminUser)
@@ -58,9 +58,9 @@ func (h *UserAdminHandler) Register(c *gin.Context) error {
 	}
 
 	ResponseSuccess(c, http.StatusCreated, "user admin created successfully", RegisterAdminUserResponse{
-		ID: result.ID,
-		Email: result.Email,
-		Name: result.Name,
+		ID:     result.ID,
+		Email:  result.Email,
+		Name:   result.Name,
 		Status: string(result.Status),
 	})
 	return nil
@@ -99,9 +99,9 @@ func (h *UserAdminHandler) GetMe(c *gin.Context) error {
 	}
 
 	ResponseSuccess(c, http.StatusOK, "user admin successfully fetched", GetMeResponse{
-		ID: result.ID,
-		Email: result.Email,
-		Name: result.Name,
+		ID:     result.ID,
+		Email:  result.Email,
+		Name:   result.Name,
 		Status: string(result.Status),
 	})
 	return nil
@@ -115,12 +115,12 @@ func (h *UserAdminHandler) GetAllUsers(c *gin.Context) error {
 	}
 
 	params := pagination.Params{
-		Page: query.Page,
+		Page:    query.Page,
 		PerPage: query.PerPage,
 	}.Normalize()
 
 	results, paginationMeta, err := h.userService.FindAll(c.Request.Context(), service.FindAllUsersQuery{
-		Param: params,
+		Param:  params,
 		Status: query.Status,
 		Search: query.Search,
 	})
@@ -133,16 +133,17 @@ func (h *UserAdminHandler) GetAllUsers(c *gin.Context) error {
 
 	for _, res := range results {
 		data = append(data, ListUsersResponse{
-			ID: res.ID,
-			TelegramID: res.TelegramID,
+			ID:               res.ID,
+			TelegramID:       res.TelegramID,
 			TelegramUsername: res.TelegramUsername,
-			FirstName: res.FirstName,
-			LastName: res.LastName,
-			Timezone: res.Timezone,
-			LanguageCode: res.LanguageCode,
+			FirstName:        res.FirstName,
+			LastName:         res.LastName,
+			Timezone:         res.Timezone,
+			LanguageCode:     res.LanguageCode,
+			Status:           string(res.Status),
 		})
 	}
-	
+
 	ResponseSuccessWithMeta(c, http.StatusOK, "users successfully fetched", data, paginationMeta)
 	return nil
 }
