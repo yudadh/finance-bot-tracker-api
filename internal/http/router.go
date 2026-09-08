@@ -12,6 +12,7 @@ import (
 func NewRouter(
 	cfg config.AppConfig, 
 	userAdminService handler.UserAdminService,
+	userService handler.UserService,
 	logger *slog.Logger,
 ) *gin.Engine {
 	if cfg.AppEnv == "production" {
@@ -22,7 +23,7 @@ func NewRouter(
 	router.Use(gin.Logger(), gin.Recovery())
 
 	healthHandler := handler.NewHealthHandler(cfg)
-	userAdminHandler := handler.NewUserAdminHandler(userAdminService, logger)
+	userAdminHandler := handler.NewUserAdminHandler(userAdminService, userService, logger)
 
 	api := router.Group("/api")
 
@@ -32,6 +33,7 @@ func NewRouter(
 		admin.Use(middleware.AdminAuth(cfg.JWT, userAdminService, logger))
 		{
 			admin.GET("/me", handler.Handle(logger, userAdminHandler.GetMe))
+			admin.GET("/users", handler.Handle(logger, userAdminHandler.GetAllUsers))
 		}
 		api.GET("/health", healthHandler.Show)
 	}
