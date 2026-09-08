@@ -12,7 +12,14 @@ type HandlerFunc func(c *gin.Context) error
 type Response[T any] struct {
 	Error   bool   `json:"error"`
 	Message string `json:"message"`
-	Data    T    `json:"data"`
+	Data    T      `json:"data"`
+}
+
+type ResponseWithMeta[T any, M any] struct {
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
+	Data    T      `json:"data"`
+	Meta    M      `json:"meta,omitempty"`
 }
 
 func Handle(logger *slog.Logger, fn HandlerFunc) gin.HandlerFunc {
@@ -26,7 +33,7 @@ func Handle(logger *slog.Logger, fn HandlerFunc) gin.HandlerFunc {
 					"method", ctx.Request.Method,
 					"path", ctx.Request.URL.Path,
 					"status", ctx.Writer.Status(),
-					"err", err, 
+					"err", err,
 				)
 			}
 		}
@@ -34,9 +41,9 @@ func Handle(logger *slog.Logger, fn HandlerFunc) gin.HandlerFunc {
 }
 
 func ResponseSuccess[T any](
-	c *gin.Context, 
-	statusCode int, 
-	message string, 
+	c *gin.Context,
+	statusCode int,
+	message string,
 	data T,
 ) {
 	c.JSON(statusCode, Response[T]{
@@ -46,10 +53,25 @@ func ResponseSuccess[T any](
 	})
 }
 
+func ResponseSuccessWithMeta[T any, M any](
+	c *gin.Context,
+	statusCode int,
+	message string,
+	data T,
+	meta M,
+) {
+	c.JSON(statusCode, ResponseWithMeta[T, M]{
+		Error:   false,
+		Message: message,
+		Data:    data,
+		Meta:    meta,
+	})
+}
+
 func ResponseError(c *gin.Context, statusCode int, message string, fieldErrors []ValidationFieldError) {
 	c.JSON(statusCode, ErrorResponse{
 		Error:   true,
 		Message: message,
-		Errors: fieldErrors,
+		Errors:  fieldErrors,
 	})
 }
