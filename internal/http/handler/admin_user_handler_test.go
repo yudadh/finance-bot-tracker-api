@@ -8,11 +8,15 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yudadh/finance-bot-tracker-api/internal/domain"
+	"github.com/yudadh/finance-bot-tracker-api/internal/pagination"
 	"github.com/yudadh/finance-bot-tracker-api/internal/service"
 )
 
@@ -34,6 +38,14 @@ type fakeUserAdminService struct {
 	findByIDValue  uint64
 }
 
+type fakeUserService struct {
+	findAllUsersCalls      int
+	findAllusersQuery      service.FindAllUsersQuery
+	findAllUsersResult     []service.FindAllUserResult
+	findAllUsersPagination *pagination.Meta
+	findAllUsersErr        error
+}
+
 func (f *fakeUserAdminService) Register(_ context.Context, input service.RegisterAdminUserInput) (*service.RegisterAdminUserResult, error) {
 	f.registerCalls++
 	f.registerInput = input
@@ -51,6 +63,12 @@ func (f *fakeUserAdminService) FindByID(_ context.Context, id uint64) (*service.
 	f.findByIDCalls++
 	f.findByIDValue = id
 	return f.findByIDResult, f.findByIDErr
+}
+
+func (f *fakeUserService) FindAll(_ context.Context, query service.FindAllUsersQuery) ([]service.FindAllUserResult, *pagination.Meta, error) {
+	f.findAllUsersCalls++
+	f.findAllusersQuery = query
+	return f.findAllUsersResult, f.findAllUsersPagination, f.findAllUsersErr
 }
 
 func TestLogin_InvalidCredentialsReturnsUnauthorized(t *testing.T) {
@@ -72,6 +90,7 @@ func TestLogin_InvalidCredentialsReturnsUnauthorized(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	handler := NewUserAdminHandler(
 		&fakeUserAdminService{loginErr: domain.ErrInvalidCredentials},
+		&fakeUserService{},
 		logger,
 	)
 
@@ -113,6 +132,7 @@ func TestLogin_Success(t *testing.T) {
 	adminService := &fakeUserAdminService{loginToken: token}
 	handler := NewUserAdminHandler(
 		adminService,
+		&fakeUserService{},
 		logger,
 	)
 
@@ -186,9 +206,11 @@ func TestRequestValidation_MalformedFormat(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewUserAdminHandler(&fakeUserAdminService{
-		loginErr: domain.ErrInvalidCredentials,
-	}, logger)
+	handler := NewUserAdminHandler(
+		&fakeUserAdminService{loginErr: domain.ErrInvalidCredentials},
+		&fakeUserService{},
+		logger,
+	)
 
 	router := gin.New()
 	router.POST("/login", Handle(logger, handler.Login))
@@ -219,6 +241,7 @@ func TestServiceError(t *testing.T) {
 		&fakeUserAdminService{
 			loginErr: errors.New("database connection failed"),
 		},
+		&fakeUserService{},
 		logger,
 	)
 
@@ -250,7 +273,11 @@ func TestRegister_Success(t *testing.T) {
 			Status: domain.AdminUserStatusActive,
 		},
 	}
-	handler := NewUserAdminHandler(adminService, logger)
+	handler := NewUserAdminHandler(
+		adminService,
+		&fakeUserService{},
+		logger,
+	)
 
 	router := gin.New()
 	router.POST("/register", Handle(logger, handler.Register))
@@ -293,9 +320,13 @@ func TestRegister_Success(t *testing.T) {
 func TestRegister_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewUserAdminHandler(&fakeUserAdminService{
-		registerErr: domain.ErrAlreadyExists,
-	}, logger)
+	handler := NewUserAdminHandler(
+		&fakeUserAdminService{
+			registerErr: domain.ErrAlreadyExists,
+		},
+		&fakeUserService{},
+		logger,
+	)
 
 	router := gin.New()
 	router.POST("/register", Handle(logger, handler.Register))
@@ -325,7 +356,11 @@ func TestGetMe_Success(t *testing.T) {
 			Status: domain.AdminUserStatusActive,
 		},
 	}
-	handler := NewUserAdminHandler(adminService, logger)
+	handler := NewUserAdminHandler(
+		adminService,
+		&fakeUserService{},
+		logger,
+	)
 
 	router := gin.New()
 	router.GET("/me", Handle(logger, func(c *gin.Context) error {
@@ -370,7 +405,11 @@ func TestGetMe_AuthenticationContextErrors(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			adminService := &fakeUserAdminService{}
-			handler := NewUserAdminHandler(adminService, logger)
+			handler := NewUserAdminHandler(
+				adminService,
+				&fakeUserService{},
+				logger,
+			)
 			router := gin.New()
 			router.GET("/me", Handle(logger, func(c *gin.Context) error {
 				if test.value != nil {
@@ -396,9 +435,11 @@ func TestGetMe_AuthenticationContextErrors(t *testing.T) {
 func TestGetMe_ServiceError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewUserAdminHandler(&fakeUserAdminService{
-		findByIDErr: domain.ErrNotFound,
-	}, logger)
+	handler := NewUserAdminHandler(
+		&fakeUserAdminService{findByIDErr: domain.ErrNotFound},
+		&fakeUserService{},
+		logger,
+	)
 
 	router := gin.New()
 	router.GET("/me", Handle(logger, func(c *gin.Context) error {
@@ -412,5 +453,240 @@ func TestGetMe_ServiceError(t *testing.T) {
 
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("expected status code %d, got %d", http.StatusNotFound, response.Code)
+	}
+}
+
+func TestGetAllUsers_ServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	userService := &fakeUserService{findAllUsersErr: errors.New("database connection failed")}
+	handler := NewUserAdminHandler(
+		&fakeUserAdminService{},
+		userService,
+		logger,
+	)
+	router := gin.New()
+	router.GET("/admin/users", Handle(logger, handler.GetAllUsers))
+
+	query := url.Values{}
+	query.Set("page", "1")
+	query.Set("per_page", "10")
+
+	request := httptest.NewRequest(http.MethodGet, "/admin/users?"+query.Encode(), nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status code %d, got %d", http.StatusInternalServerError, response.Code)
+	}
+}
+
+func TestGetAllUsers_InvalidQuery(t *testing.T) {
+	tests := []struct {
+		name  string
+		query ListUsersQuery
+	}{
+		{
+			name: "invalid page",
+			query: ListUsersQuery{
+				PerPage: 10,
+				Page:    0,
+			},
+		},
+		{
+			name: "invalid per_page",
+			query: ListUsersQuery{
+				PerPage: 5,
+				Page:    1,
+			},
+		},
+		{
+			name: "invalid status",
+			query: ListUsersQuery{
+				PerPage: 10,
+				Page:    1,
+				Status:  "invalid status",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+			userService := &fakeUserService{}
+			handler := NewUserAdminHandler(
+				&fakeUserAdminService{},
+				userService,
+				logger,
+			)
+			router := gin.New()
+			router.GET("/admin/users", Handle(logger, handler.GetAllUsers))
+
+			query := url.Values{}
+			query.Set("page", strconv.Itoa(test.query.Page))
+			query.Set("per_page", strconv.Itoa(test.query.PerPage))
+			query.Set("status", test.query.Status)
+
+			request := httptest.NewRequest(http.MethodGet, "/admin/users?"+query.Encode(), nil)
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, request)
+
+			if response.Code != http.StatusUnprocessableEntity {
+				t.Fatalf("expected status code %d, got %d", http.StatusUnprocessableEntity, response.Code)
+			}
+		})
+	}
+}
+
+func isSlice(v any) bool {
+	if v == nil {
+		return false
+	}
+
+	return reflect.TypeOf(v).Kind() == reflect.Slice
+}
+
+func TestGetAllUsers_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	userService := &fakeUserService{
+		findAllUsersResult: []service.FindAllUserResult{
+			{
+				ID:               1,
+				TelegramID:       111111,
+				TelegramUsername: "john_doe",
+				FirstName:        "John",
+				LastName:         "Doe",
+				LanguageCode:     "id",
+				Timezone:         "Asia/Makassar",
+				Status:           domain.UserStatusActive,
+			},
+			{
+				ID:               2,
+				TelegramID:       222222,
+				TelegramUsername: "fulan_doe",
+				FirstName:        "Fulan",
+				LastName:         "Doe",
+				LanguageCode:     "id",
+				Timezone:         "Asia/Makassar",
+				Status:           domain.UserStatusInactive,
+			},
+		},
+		findAllUsersPagination: &pagination.Meta{
+			Page:       2,
+			PerPage:    20,
+			Total:      22,
+			TotalPages: 2,
+		},
+	}
+	handler := NewUserAdminHandler(
+		&fakeUserAdminService{},
+		userService,
+		logger,
+	)
+	router := gin.New()
+	router.GET("/admin/users", Handle(logger, handler.GetAllUsers))
+
+	query := url.Values{}
+	query.Set("page", "2")
+	query.Set("per_page", "20")
+	query.Set("status", "active")
+	query.Set("search", "john")
+
+	request := httptest.NewRequest(http.MethodGet, "/admin/users?"+query.Encode(), nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status code %d, got %d", http.StatusOK, response.Code)
+	}
+
+	var body ResponseWithMeta[[]ListUsersResponse, pagination.Meta]
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response %v", err)
+	}
+
+	if body.Error || body.Message != "users successfully fetched" {
+		t.Fatalf("unexpected response envelope: %+v", body)
+	}
+	if !isSlice(body.Data) || len(body.Data) != 2 {
+		t.Fatalf("expected two users, got %+v", body.Data)
+	}
+	if body.Data[0] != (ListUsersResponse{
+		ID:               1,
+		TelegramID:       111111,
+		TelegramUsername: "john_doe",
+		FirstName:        "John",
+		LastName:         "Doe",
+		LanguageCode:     "id",
+		Timezone:         "Asia/Makassar",
+		Status:           string(domain.UserStatusActive),
+	}) {
+		t.Fatalf("unexpected first user: %+v", body.Data[0])
+	}
+	if body.Data[1].Status != string(domain.UserStatusInactive) {
+		t.Fatalf("expected second user status %q, got %q", domain.UserStatusInactive, body.Data[1].Status)
+	}
+	if body.Meta != *userService.findAllUsersPagination {
+		t.Fatalf("unexpected pagination metadata: %+v", body.Meta)
+	}
+
+	if userService.findAllUsersCalls != 1 {
+		t.Fatalf("expected FindAll to be called once, got %d", userService.findAllUsersCalls)
+	}
+	expectedQuery := service.FindAllUsersQuery{
+		Param:  pagination.Params{Page: 2, PerPage: 20},
+		Status: "active",
+		Search: "john",
+	}
+	if userService.findAllusersQuery != expectedQuery {
+		t.Fatalf("unexpected FindAll query: got %+v, want %+v", userService.findAllusersQuery, expectedQuery)
+	}
+}
+
+func TestGetAllUsers_EmptyResult(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	userService := &fakeUserService{
+		findAllUsersPagination: &pagination.Meta{
+			Page:       1,
+			PerPage:    10,
+			Total:      0,
+			TotalPages: 0,
+		},
+	}
+	handler := NewUserAdminHandler(
+		&fakeUserAdminService{},
+		userService,
+		logger,
+	)
+	router := gin.New()
+	router.GET("/admin/users", Handle(logger, handler.GetAllUsers))
+
+	request := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status code %d, got %d", http.StatusOK, response.Code)
+	}
+
+	var body ResponseWithMeta[[]ListUsersResponse, pagination.Meta]
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body.Data == nil || len(body.Data) != 0 {
+		t.Fatalf("expected an empty non-nil data array, got %#v", body.Data)
+	}
+	if body.Meta != *userService.findAllUsersPagination {
+		t.Fatalf("unexpected pagination metadata: %+v", body.Meta)
+	}
+
+	expectedQuery := service.FindAllUsersQuery{
+		Param: pagination.Params{Page: 1, PerPage: 10},
+	}
+	if userService.findAllusersQuery != expectedQuery {
+		t.Fatalf("unexpected default query: %+v", userService.findAllusersQuery)
 	}
 }
