@@ -81,3 +81,29 @@ func (r *TransactionRepository) SumTransactionsByUserAndDateRange(
 	return &total, nil
 }
 
+func (r *TransactionRepository) FindByUserIDWithCategory(
+	ctx context.Context, 
+	userID uint64,
+	startTransactionDate time.Time,
+	endTransactionDate time.Time,
+) ([]domain.Transaction, error) {
+	var transactions []domain.Transaction
+
+	err := r.db.
+		WithContext(ctx).
+		Preload("Category").
+		Where("user_id = ?", userID).
+		Where("transaction_date >= ?", startTransactionDate).
+		Where("transaction_date <= ?", endTransactionDate).
+		Order("transaction_date DESC").
+		Order("id DESC").
+		Find(&transactions).
+		Error
+
+	if err != nil {
+		return nil, translateError(err)
+	}
+
+	return transactions, nil
+}
+
