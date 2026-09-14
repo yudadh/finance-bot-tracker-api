@@ -13,6 +13,7 @@ func NewRouter(
 	cfg config.AppConfig, 
 	userAdminService handler.UserAdminService,
 	userService handler.UserService,
+	transactionService handler.TransactionService,
 	logger *slog.Logger,
 ) *gin.Engine {
 	if cfg.AppEnv == "production" {
@@ -24,6 +25,7 @@ func NewRouter(
 
 	healthHandler := handler.NewHealthHandler(cfg)
 	userAdminHandler := handler.NewUserAdminHandler(userAdminService, userService, logger)
+	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	api := router.Group("/api")
 
@@ -34,6 +36,13 @@ func NewRouter(
 		{
 			admin.GET("/me", handler.Handle(logger, userAdminHandler.GetMe))
 			admin.GET("/users", handler.Handle(logger, userAdminHandler.GetAllUsers))
+			admin.GET(
+				"/transactions/users/:id", 
+				handler.Handle(
+					logger, 
+					transactionHandler.GetTransactionsByUserPeriod,
+				),
+			)
 		}
 		api.GET("/health", healthHandler.Show)
 	}
