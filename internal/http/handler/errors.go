@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -41,6 +42,12 @@ func HandleError(c *gin.Context, err error) {
 	case errors.Is(err, domain.ErrInvalidInput):
 		ResponseError(c, http.StatusBadRequest, "invalid input", nil)
 
+	case errors.Is(err, domain.ErrInvalidID):
+		ResponseError(c, http.StatusBadRequest, "id must be a positive integer", nil)
+
+	case errors.Is(err, domain.ErrInvalidDateRange):
+		ResponseError(c, http.StatusBadRequest, "start_date must be before or equal to end_date", nil)
+
 	default:
 		ResponseError(c, http.StatusInternalServerError, "internal server error", nil)
 	}
@@ -56,6 +63,11 @@ func validationErrorMessage(err validator.FieldError) string {
 		return "must be at least " + err.Param() + " characters"
 	case "max":
 		return "maximum length of " + err.Param() + " characters"
+	case "datetime":
+		return fmt.Sprintf(
+			"%s must be YYYY-MM-DD format",
+			err.Field(),
+		)
 	default:
 		return "is invalid"
 	}
