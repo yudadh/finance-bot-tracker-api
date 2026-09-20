@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -24,8 +25,14 @@ type ErrorResponse struct {
 
 func HandleError(c *gin.Context, err error) {
 	var validationErrors validator.ValidationErrors
+	var typeErr *json.UnmarshalTypeError
 
 	switch {
+	case errors.As(err, &typeErr):
+		err := ParseUnmarshalTypeErrors(typeErr)
+		errors := make([]ValidationFieldError, 0, 1)
+		errors = append(errors, err)
+		ResponseError(c, http.StatusUnprocessableEntity, "validation faield", errors)
 	case errors.As(err, &validationErrors):
 		errors := ParseValidationErrors(validationErrors)
 		ResponseError(c, http.StatusUnprocessableEntity, "validation failed", errors)
@@ -84,4 +91,11 @@ func ParseValidationErrors(errs validator.ValidationErrors) []ValidationFieldErr
 	}
 
 	return result
+}
+
+func ParseUnmarshalTypeErrors(typeErr *json.UnmarshalTypeError) ValidationFieldError {
+	return ValidationFieldError{
+		Field: typeErr.Field,
+		Message: fmt.Sprintf("must be %s", typeErr.Type.String()),
+	}
 }
