@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -98,4 +99,13 @@ func ParseUnmarshalTypeErrors(typeErr *json.UnmarshalTypeError) ValidationFieldE
 		Field: typeErr.Field,
 		Message: fmt.Sprintf("must be %s", typeErr.Type.String()),
 	}
+}
+
+func ParsePositiveID(value string) (uint64, error) {
+	result, err := strconv.ParseUint(value, 10, 64)
+	if err != nil || result == 0 {
+		return 0, domain.ErrInvalidID
+	}
+
+	return result, nil
 }

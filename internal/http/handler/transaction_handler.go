@@ -3,11 +3,9 @@ package handler
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yudadh/finance-bot-tracker-api/internal/domain"
 	"github.com/yudadh/finance-bot-tracker-api/internal/service"
 )
 
@@ -47,17 +45,8 @@ func parseDateToUTC(value string) (*time.Time, error) {
 	return &date, nil
 }
 
-func parsePositiveID(value string) (uint64, error) {
-	result, err := strconv.ParseUint(value, 10, 64)
-	if err != nil || result == 0 {
-		return 0, domain.ErrInvalidID
-	}
-
-	return result, nil
-}
-
 func (h *TransactionHandler) GetTransactionsByUserPeriod(c *gin.Context) error {
-	userID, err := parsePositiveID(c.Param("id"))
+	userID, err := ParsePositiveID(c.Param("id"))
 	if err != nil {
 		return err
 	}
