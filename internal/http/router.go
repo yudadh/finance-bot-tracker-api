@@ -14,6 +14,7 @@ func NewRouter(
 	userAdminService handler.UserAdminService,
 	userService handler.UserService,
 	transactionService handler.TransactionService,
+	categoryService handler.CategoryService,
 	logger *slog.Logger,
 ) *gin.Engine {
 	if cfg.AppEnv == "production" {
@@ -26,6 +27,7 @@ func NewRouter(
 	healthHandler := handler.NewHealthHandler(cfg)
 	userAdminHandler := handler.NewUserAdminHandler(userAdminService, userService, logger)
 	transactionHandler := handler.NewTransactionHandler(transactionService)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
 
 	api := router.Group("/api")
 
@@ -44,6 +46,17 @@ func NewRouter(
 				),
 			)
 		}
+		// category
+		category := api.Group("/category")
+		category.Use(middleware.AdminAuth(cfg.JWT, userAdminService, logger))
+		{
+			category.POST("", handler.Handle(logger, categoryHandler.Create))
+			category.GET("/:id", handler.Handle(logger, categoryHandler.FindByID))
+			category.GET("", handler.Handle(logger, categoryHandler.FindAll))
+			category.PUT("/:id", handler.Handle(logger, categoryHandler.Update))
+			category.DELETE("/:id", handler.Handle(logger, categoryHandler.HardDelete))
+		}
+
 		api.GET("/health", healthHandler.Show)
 	}
 
