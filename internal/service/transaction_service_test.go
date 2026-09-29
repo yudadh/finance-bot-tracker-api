@@ -42,11 +42,11 @@ func (f *fakeTransactionRepo) FindByUserIDWithCategory(
 	return f.findByUserIDWithCategoryResult, f.findByUserIDWithCategoryErr
 }
 
-type fakeCategoryRepo struct {
+type fakeCategoryRepoForTransactionService struct {
 	categories []domain.Category
 }
 
-func (f *fakeCategoryRepo) FindAll(ctx context.Context) ([]domain.Category, error) {
+func (f *fakeCategoryRepoForTransactionService) FindAllWithoutPagination(ctx context.Context) ([]domain.Category, error) {
 	return f.categories, nil
 }
 
@@ -95,7 +95,7 @@ func TestTransactionService_CreateFromText_Success(t *testing.T) {
 			Keywords: datatypes.JSONSlice[string]{"makan", "kopi"},
 		},
 	}
-	categoryRepo := &fakeCategoryRepo{categories: categories}
+	categoryRepo := &fakeCategoryRepoForTransactionService{categories: categories}
 	parserAttemptRepo := &fakeParserAttemptRepo{}
 	userRepo := &fakeUserRepo{}
 
@@ -148,7 +148,7 @@ func TestTransactionService_CreateFromText_ParseErrorDoesNotCreateTransaction(t 
 
 	service := NewTransactionService(
 		transactionRepo,
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		&fakeParserAttemptRepo{},
 		&fakeUserRepo{},
 		&fakeParser{err: parser.ErrAmountNotFound},
@@ -175,7 +175,7 @@ func TestTransactionService_CreateFromText_ParseErrorReturnSuccessFalse(t *testi
 
 	service := NewTransactionService(
 		transactionRepo,
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		parserAttemptRepo,
 		&fakeUserRepo{},
 		&fakeParser{err: parser.ErrAmountNotFound},
@@ -220,7 +220,7 @@ func TestTransactionService_CreateFromText_NoMatchingCategory(t *testing.T) {
 			Keywords: datatypes.JSONSlice[string]{"makan", "kopi"},
 		},
 	}
-	categoryRepo := &fakeCategoryRepo{categories: categories}
+	categoryRepo := &fakeCategoryRepoForTransactionService{categories: categories}
 	parserAttemptRepo := &fakeParserAttemptRepo{}
 	parser := &fakeParser{intent: &parser.TransactionIntent{
 		Type:            domain.TransactionTypeExpense,
@@ -263,7 +263,7 @@ func TestFindTransactionsByUserID_RepositoryError(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	service := NewTransactionService(
 		&fakeTransactionRepo{findByUserIDWithCategoryErr: errors.New("database connection failed")},
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		&fakeParserAttemptRepo{},
 		&fakeUserRepo{},
 		&fakeParser{},
@@ -313,7 +313,7 @@ func TestFindTransactionsByUserID_SuccessMapsAllFieldsAndDates(t *testing.T) {
 
 	svc := NewTransactionService(
 		transactionRepo,
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		&fakeParserAttemptRepo{},
 		userRepo,
 		&fakeParser{},
@@ -355,7 +355,7 @@ func TestFindTransactionsByUserID_InvalidDateRangeDoesNotQueryRepositories(t *te
 	transactionRepo := &fakeTransactionRepo{}
 	svc := NewTransactionService(
 		transactionRepo,
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		&fakeParserAttemptRepo{},
 		userRepo,
 		&fakeParser{},
@@ -379,7 +379,7 @@ func TestFindTransactionsByUserID_UserNotFound(t *testing.T) {
 	transactionRepo := &fakeTransactionRepo{}
 	svc := NewTransactionService(
 		transactionRepo,
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		&fakeParserAttemptRepo{},
 		userRepo,
 		&fakeParser{},
@@ -407,7 +407,7 @@ func TestFindTransactionsByUserID_UserRepositoryError(t *testing.T) {
 	transactionRepo := &fakeTransactionRepo{}
 	svc := NewTransactionService(
 		transactionRepo,
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		&fakeParserAttemptRepo{},
 		userRepo,
 		&fakeParser{},
@@ -429,7 +429,7 @@ func TestFindTransactionsByUserID_EmptyResultIsNonNil(t *testing.T) {
 	userRepo := &fakeUserRepo{result: &domain.User{ID: 42}}
 	svc := NewTransactionService(
 		&fakeTransactionRepo{findByUserIDWithCategoryResult: []domain.Transaction{}},
-		&fakeCategoryRepo{},
+		&fakeCategoryRepoForTransactionService{},
 		&fakeParserAttemptRepo{},
 		userRepo,
 		&fakeParser{},

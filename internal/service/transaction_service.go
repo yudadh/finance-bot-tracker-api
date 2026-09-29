@@ -35,7 +35,7 @@ type transactionRepository interface {
 }
 
 type categoryRepository interface {
-	FindAll(ctx context.Context) ([]domain.Category, error)
+	FindAllWithoutPagination(ctx context.Context) ([]domain.Category, error)
 }
 
 type parserAttemptRepository interface {
@@ -94,7 +94,7 @@ func (s *TransactionService) CreateFromText(
 	ctx context.Context,
 	input CreateTransactionFromTextInput,
 ) (*CreateTransactionFromTextResult, error) {
-	categories, err := s.categoryRepo.FindAll(ctx)
+	categories, err := s.categoryRepo.FindAllWithoutPagination(ctx)
 	if err != nil {
 		return nil, err
 	}
