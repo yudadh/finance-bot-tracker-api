@@ -71,6 +71,10 @@ func validationErrorMessage(err validator.FieldError) string {
 		return "must be at least " + err.Param() + " characters"
 	case "max":
 		return "maximum length of " + err.Param() + " characters"
+	case "gt":
+		return "value of must be greater than " + err.Param() +""
+	case "gte":
+		return "value of must be greater or equal than " + err.Param() +""
 	case "datetime":
 		return fmt.Sprintf(
 			"%s must be YYYY-MM-DD format",
