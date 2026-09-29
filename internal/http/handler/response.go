@@ -15,6 +15,11 @@ type Response[T any] struct {
 	Data    T      `json:"data"`
 }
 
+type ResponseWithoutData struct {
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
+}
+
 type ResponseWithMeta[T any, M any] struct {
 	Error   bool   `json:"error"`
 	Message string `json:"message"`
@@ -50,6 +55,17 @@ func ResponseSuccess[T any](
 		Error:   false,
 		Message: message,
 		Data:    data,
+	})
+}
+
+func ResponseSuccessWithoutData(
+	c *gin.Context,
+	statusCode int,
+	message string,
+) {
+	c.JSON(statusCode, ResponseWithoutData{
+		Error: false,
+		Message: message,
 	})
 }
 
