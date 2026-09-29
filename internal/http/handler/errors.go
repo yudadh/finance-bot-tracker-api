@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -24,8 +26,14 @@ type ErrorResponse struct {
 
 func HandleError(c *gin.Context, err error) {
 	var validationErrors validator.ValidationErrors
+	var typeErr *json.UnmarshalTypeError
 
 	switch {
+	case errors.As(err, &typeErr):
+		err := ParseUnmarshalTypeErrors(typeErr)
+		errors := make([]ValidationFieldError, 0, 1)
+		errors = append(errors, err)
+		ResponseError(c, http.StatusUnprocessableEntity, "validation faield", errors)
 	case errors.As(err, &validationErrors):
 		errors := ParseValidationErrors(validationErrors)
 		ResponseError(c, http.StatusUnprocessableEntity, "validation failed", errors)
@@ -63,6 +71,10 @@ func validationErrorMessage(err validator.FieldError) string {
 		return "must be at least " + err.Param() + " characters"
 	case "max":
 		return "maximum length of " + err.Param() + " characters"
+	case "gt":
+		return "value of must be greater than " + err.Param() +""
+	case "gte":
+		return "value of must be greater or equal than " + err.Param() +""
 	case "datetime":
 		return fmt.Sprintf(
 			"%s must be YYYY-MM-DD format",
@@ -84,4 +96,20 @@ func ParseValidationErrors(errs validator.ValidationErrors) []ValidationFieldErr
 	}
 
 	return result
+}
+
+func ParseUnmarshalTypeErrors(typeErr *json.UnmarshalTypeError) ValidationFieldError {
+	return ValidationFieldError{
+		Field: typeErr.Field,
+		Message: fmt.Sprintf("must be %s", typeErr.Type.String()),
+	}
+}
+
+func ParsePositiveID(value string) (uint64, error) {
+	result, err := strconv.ParseUint(value, 10, 64)
+	if err != nil || result == 0 {
+		return 0, domain.ErrInvalidID
+	}
+
+	return result, nil
 }

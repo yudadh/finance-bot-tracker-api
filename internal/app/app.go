@@ -26,7 +26,11 @@ type App struct {
 }
 
 func New(cfg config.Config, logger *slog.Logger) (*App, error) {
-	database := database.NewGormDB(cfg.Database)
+	database, err := database.NewGormDB(cfg.Database)
+	if err != nil {
+		logger.Error("gorm error", "error:", err)
+		return nil, err
+	}
 	
 	// repository
 	transactionRepository := repository.NewTransactionRepository(database)
@@ -50,8 +54,9 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	userService := service.NewUserService(userRepository, logger)
 	budgetService := service.NewBudgetService(budgetRepository, transactionRepository, logger)
 	adminUserService := service.NewAdminUserService(adminUserRepository, cfg.App.JWT)
+	categoryService := service.NewCategoryService(categoryRepository)
 	
-	router := appHttp.NewRouter(cfg.App, adminUserService, userService, transactionService, logger)
+	router := appHttp.NewRouter(cfg.App, adminUserService, userService, transactionService, categoryService, logger)
 	botHandler := telegram.NewBotHandler(transactionService, userService, budgetService, logger)
 	bot, err := telegram.NewBot(cfg.App.TelegramBotToken, botHandler, logger)
 	if err != nil {
