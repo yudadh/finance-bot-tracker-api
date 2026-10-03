@@ -236,3 +236,14 @@ func unknownCommandMessage() string {
 
 📌 Ketik "help" untuk melihat daftar perintah.`
 }
+
+func cancelCommandMessage(cvType ConversationType) string {
+	switch cvType {
+	case ConversationEditTransaction:
+		return "❗ Edit transaksi dibatalkan"
+	case ConversationDeleteTransaction:
+		return "❗ Hapus transaksi dibatalkan"
+	default:
+		return ""
+	}
+}
