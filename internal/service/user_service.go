@@ -31,6 +31,17 @@ type FindOrCreateUserInput struct {
 	LanguageCode     string
 }
 
+type FindOrCreateUserResult struct {
+	ID               uint64
+	TelegramID       int64
+	TelegramUsername string
+	FirstName        string
+	LastName         string
+	LanguageCode     string
+	Timezone         string
+	Status           domain.UserStatus
+}
+
 type FindAllUserResult struct {
 	ID               uint64
 	TelegramID       int64
@@ -58,10 +69,19 @@ func NewUserService(userRepo userRepository, logger *slog.Logger) *UserService {
 func (s *UserService) FindOrCreate(
 	ctx context.Context,
 	userInput *FindOrCreateUserInput,
-) (*domain.User, error) {
+) (*FindOrCreateUserResult, error) {
 	user, err := s.userRepo.FindByTelegramID(ctx, userInput.TelegramID)
 	if err == nil {
-		return user, nil
+		return &FindOrCreateUserResult{
+			ID: user.ID,
+			TelegramID: user.TelegramID,
+			TelegramUsername: user.TelegramUsername,
+			FirstName: user.FirstName,
+			LastName: user.FirstName,
+			LanguageCode: user.LanguageCode,
+			Timezone: user.Timezone,
+			Status: user.Status,
+		}, nil
 	}
 
 	if !errors.Is(err, domain.ErrNotFound) {
@@ -87,7 +107,16 @@ func (s *UserService) FindOrCreate(
 		return nil, err
 	}
 
-	return user, nil
+	return &FindOrCreateUserResult{
+		ID: user.ID,
+		TelegramID: user.TelegramID,
+		TelegramUsername: user.TelegramUsername,
+		FirstName: user.FirstName,
+		LastName: user.FirstName,
+		LanguageCode: user.LanguageCode,
+		Timezone: user.Timezone,
+		Status: user.Status,
+	}, nil
 }
 
 func (s *UserService) FindAll(ctx context.Context, query FindAllUsersQuery) ([]FindAllUserResult, *pagination.Meta, error) {
