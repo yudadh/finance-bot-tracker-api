@@ -10,6 +10,7 @@ import (
 	"github.com/yudadh/finance-bot-tracker-api/internal/config"
 	"github.com/yudadh/finance-bot-tracker-api/internal/database"
 	appHttp "github.com/yudadh/finance-bot-tracker-api/internal/http"
+	"github.com/yudadh/finance-bot-tracker-api/internal/http/handler"
 	"github.com/yudadh/finance-bot-tracker-api/internal/parser"
 	"github.com/yudadh/finance-bot-tracker-api/internal/repository"
 	"github.com/yudadh/finance-bot-tracker-api/internal/service"
@@ -26,6 +27,7 @@ type App struct {
 }
 
 func New(cfg config.Config, logger *slog.Logger) (*App, error) {
+	handler.RegisterJSONTagName()
 	database, err := database.NewGormDB(cfg.Database)
 	if err != nil {
 		logger.Error("gorm error", "error:", err)
@@ -55,9 +57,10 @@ func New(cfg config.Config, logger *slog.Logger) (*App, error) {
 	budgetService := service.NewBudgetService(budgetRepository, transactionRepository, logger)
 	adminUserService := service.NewAdminUserService(adminUserRepository, cfg.App.JWT)
 	categoryService := service.NewCategoryService(categoryRepository)
+	conversationStore := telegram.NewConversationStore()
 	
 	router := appHttp.NewRouter(cfg.App, adminUserService, userService, transactionService, categoryService, logger)
-	botHandler := telegram.NewBotHandler(transactionService, userService, budgetService, logger)
+	botHandler := telegram.NewBotHandler(transactionService, userService, budgetService, conversationStore, logger)
 	bot, err := telegram.NewBot(cfg.App.TelegramBotToken, botHandler, logger)
 	if err != nil {
 		return nil, err
