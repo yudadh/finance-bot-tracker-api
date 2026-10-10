@@ -1,14 +1,89 @@
 package telegram
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
+	tgBot "github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	"github.com/yudadh/finance-bot-tracker-api/internal/domain"
 	"github.com/yudadh/finance-bot-tracker-api/internal/service"
 )
+
+type Reply interface {
+	Text(
+		ctx context.Context,
+		chatID int64,
+		text string,
+	) error
+	Inline(
+		ctx context.Context,
+		chatID int64,
+		text string,
+		keyboard models.InlineKeyboardMarkup,
+	) error
+}
+
+type ReplyFactory struct {
+	logger *slog.Logger
+}
+
+func NewReplyFactory(logger *slog.Logger) *ReplyFactory {
+	return &ReplyFactory{logger: logger}
+}
+
+func (f *ReplyFactory) For(bot *tgBot.Bot) Reply {
+	return &TelegramReply{
+		bot: bot,
+		logger: f.logger,
+	}
+}
+
+type TelegramReply struct {
+	bot *tgBot.Bot
+	logger *slog.Logger
+}
+
+func (r *TelegramReply) Text(
+	ctx context.Context, 
+	chatID int64, 
+	text string,
+) error {
+	_, err := r.bot.SendMessage(ctx, &tgBot.SendMessageParams{
+		ChatID: chatID,
+		Text: text,
+	})
+
+	if err != nil {
+		r.logger.ErrorContext(ctx, "failed to send telegram reply text", "error", err)
+	}
+
+	return err
+}
+
+func (r *TelegramReply) Inline(
+	ctx context.Context,
+	chatID int64,
+	text string,
+	keyboard models.InlineKeyboardMarkup,
+) error {
+	_, err := r.bot.SendMessage(ctx, &tgBot.SendMessageParams{
+		ChatID: chatID,
+		Text: text,
+		ReplyMarkup: keyboard,
+	})
+
+	if err != nil {
+		r.logger.ErrorContext(ctx, "failed to send telegram reply inline keyboard", "error", err)
+	}
+
+	return err
+}
+
 
 type CmdType string
 
@@ -31,6 +106,8 @@ Aku bisa bantu mencatat dan memantau keuangan kamu.
 📌 Command yang tersedia:
 
 🚀 start / mulai - Memulai bot
+✏️ edit - Edit transaksi
+🗑️ delete / hapus - Menghapus transaksi
 ❓ help / bantuan - Melihat bantuan
 📅 today / hari ini - Ringkasan hari ini
 🗓️ month / bulan ini - Ringkasan bulan ini
@@ -246,4 +323,8 @@ func cancelCommandMessage(cvType ConversationType) string {
 	default:
 		return ""
 	}
+}
+
+func timeoutConversationMessage() string {
+	return "⌛ Waktu percakapan telah habis, silahkan ulangi kembali atau coba menu lainnya"
 }
