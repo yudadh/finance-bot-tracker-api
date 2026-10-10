@@ -11,6 +11,8 @@ const (
 	CommandMonth  Command = "month"
 	CommandCancel Command = "cancel"
 	CommandReport Command = "report"
+	CommandEdit Command = "edit"
+	CommandDelete Command = "delete"
 	CommandBudget Command = "budget"
 	CommandInfo   Command = "info"
 	CommandSetBudget Command = "setbudget"
@@ -32,6 +34,10 @@ func DetectCommand(text string) Command {
 		return CommandCancel
 	case "report", "laporan":
 		return CommandReport
+	case "edit":
+		return CommandEdit
+	case "delete", "hapus":
+		return CommandDelete
 	case "budget":
 		return CommandBudget
 	case "info":

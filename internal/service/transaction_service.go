@@ -134,6 +134,7 @@ func (s *TransactionService) CreateFromText(
 	}
 
 	categoryID := findCategoryID(intent.CategoryName, intent.Type, categories)
+	transactionDate := normalizeDateToUTC(intent.TransactionDate, input.Timezone)
 
 	transaction := domain.Transaction{
 		UserID:           input.UserID,
@@ -142,7 +143,7 @@ func (s *TransactionService) CreateFromText(
 		Amount:           intent.Amount,
 		Currency:         intent.Currency,
 		Description:      intent.Description,
-		TransactionDate:  intent.TransactionDate,
+		TransactionDate:  transactionDate,
 		Source:           domain.TransactionSourceTelegram,
 		RawText:          &input.Text,
 		ParserConfidence: &intent.Confidence,
@@ -185,6 +186,18 @@ func findCategoryID(
 	}
 
 	return nil
+}
+
+func normalizeDateToUTC(t time.Time, loc *time.Location) time.Time {
+	year, month, day := t.In(loc).Date()
+
+	return time.Date(
+		year,
+		month,
+		day,
+		0,0,0,0,
+		time.UTC,
+	)
 }
 
 func (s *TransactionService) FindTransactionsByUserID(

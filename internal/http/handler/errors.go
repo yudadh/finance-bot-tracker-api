@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/yudadh/finance-bot-tracker-api/internal/domain"
 )
@@ -112,4 +114,22 @@ func ParsePositiveID(value string) (uint64, error) {
 	}
 
 	return result, nil
+}
+
+func RegisterJSONTagName() {
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		v.RegisterTagNameFunc(func(field reflect.StructField) string {
+			name := strings.SplitN(field.Tag.Get("json"), ",", 2)[0]
+
+			if name == "-" {
+				return ""
+			}
+
+			if name == "" {
+				return field.Name
+			}
+
+			return name
+		})
+	}
 }
