@@ -13,12 +13,17 @@ type budgetService interface {
 	budgetAlert
 }
 
+type transactionService interface {
+	transactionFinderOrCreator
+	transactionFinder
+}
+
 type BotHandler struct {
 	router *UpdateRouter
 }
 
 func NewBotHandler(
-	transactionService transactionFinderOrCreator,
+	transactionService transactionService,
 	userService userFinderOrCreator,
 	budgetService budgetService,
 	conversations *ConversationStore,
