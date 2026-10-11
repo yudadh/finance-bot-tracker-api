@@ -18,11 +18,13 @@ type CommandHandler struct {
 
 func NewCommandHandler(
 	budgetHandler *BudgetHandler,
+	conversationHandler *ConversationHandler,
 	conversations *ConversationStore,
 	logger *slog.Logger,
 ) *CommandHandler {
 	return &CommandHandler{
 		budgetHandler: budgetHandler,
+		conversationHandler: conversationHandler,
 		conversations: conversations,
 		logger:        logger,
 	}

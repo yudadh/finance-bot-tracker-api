@@ -32,7 +32,7 @@ func NewBotHandler(
 	editTransactionFlow := NewEditTransactionFlow(transactionService, conversations)
 	deleteTransactionFlow := NewDeleteTransactionFlow(conversations)
 	conversationHandler := NewConversationHandler(editTransactionFlow, deleteTransactionFlow, conversations)
-	commandHandler := NewCommandHandler(budgetHandler, conversations, logger)
+	commandHandler := NewCommandHandler(budgetHandler, conversationHandler, conversations, logger)
 	callbackHandler := NewCallbackHandler(conversationHandler, conversations)
 
 	messageHandler := NewMessageHandler(
