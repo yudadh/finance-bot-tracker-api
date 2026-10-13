@@ -338,7 +338,7 @@ func TestFindByCategoryID_InvalidRequestParam(t *testing.T) {
 
 	handler := NewCategoryHandler(categoryService)
 
-	router.GET("/api/category:id", Handle(logger, handler.FindByID))
+	router.GET("/api/category/:id", Handle(logger, handler.FindByID))
 	
 	request := httptest.NewRequest(http.MethodGet, "/api/category/0", nil)
 	response := httptest.NewRecorder()
