@@ -22,6 +22,13 @@ type fakeTransactionRepo struct {
 	endTransactionDate             time.Time
 	findByUserIDWithCategoryResult []domain.Transaction
 	findByUserIDWithCategoryErr    error
+
+	id             uint64
+	findByIDResult *domain.Transaction
+	findByIDErr    error
+
+	updateTransactionInput *domain.Transaction
+	updateTransactionErr   error
 }
 
 func (f *fakeTransactionRepo) Create(ctx context.Context, transaction *domain.Transaction) error {
@@ -40,6 +47,16 @@ func (f *fakeTransactionRepo) FindByUserIDWithCategory(
 	f.startTransactionDate = startTransactionDate
 	f.endTransactionDate = endTransactionDate
 	return f.findByUserIDWithCategoryResult, f.findByUserIDWithCategoryErr
+}
+
+func (f *fakeTransactionRepo) FindByID(ctx context.Context, id uint64) (*domain.Transaction, error) {
+	f.id = id
+	return f.findByIDResult, f.findByIDErr
+}
+
+func (f *fakeTransactionRepo) Update(ctx context.Context, transaction *domain.Transaction) error {
+	f.updateTransactionInput = transaction
+	return f.updateTransactionErr
 }
 
 type fakeCategoryRepoForTransactionService struct {
@@ -75,10 +92,17 @@ func (f *fakeUserRepo) FindByID(ctx context.Context, id uint64) (*domain.User, e
 type fakeParser struct {
 	intent *parser.TransactionIntent
 	err    error
+
+	editIntent    *parser.EditTransactionIntent
+	editIntentErr error
 }
 
 func (f *fakeParser) Parse(input parser.ParseInput) (*parser.TransactionIntent, error) {
 	return f.intent, f.err
+}
+
+func (f *fakeParser) ParseEdit(input parser.ParseEditInput) (*parser.EditTransactionIntent, error) {
+	return f.editIntent, f.editIntentErr
 }
 
 func TestTransactionService_CreateFromText_Success(t *testing.T) {
@@ -118,10 +142,16 @@ func TestTransactionService_CreateFromText_Success(t *testing.T) {
 		nil,
 	)
 
+	loc, err := time.LoadLocation("Asia/Makassar")
+	if err != nil {
+		t.Fatalf("error load location: %v", err)
+	}
+
 	result, err := service.CreateFromText(ctx, CreateTransactionFromTextInput{
 		UserID:   10,
 		Text:     "makan siang 10000",
 		Now:      now,
+		Timezone: loc,
 		Currency: "IDR",
 	})
 
@@ -155,9 +185,15 @@ func TestTransactionService_CreateFromText_ParseErrorDoesNotCreateTransaction(t 
 		nil,
 	)
 
-	_, err := service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
+	loc, err := time.LoadLocation("Asia/Makassar")
+	if err != nil {
+		t.Fatalf("error load location: %v", err)
+	}
+
+	_, err = service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
 		UserID: 1,
 		Text:   "makan siang",
+		Timezone: loc,
 	})
 
 	if err == nil {
@@ -182,9 +218,15 @@ func TestTransactionService_CreateFromText_ParseErrorReturnSuccessFalse(t *testi
 		nil,
 	)
 
-	_, err := service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
+	loc, err := time.LoadLocation("Asia/Makassar")
+	if err != nil {
+		t.Fatalf("error load location: %v", err)
+	}
+
+	_, err = service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
 		UserID: 1,
 		Text:   "gak tau",
+		Timezone: loc,
 	})
 
 	if err == nil {
@@ -241,9 +283,15 @@ func TestTransactionService_CreateFromText_NoMatchingCategory(t *testing.T) {
 		nil,
 	)
 
-	_, err := service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
+	loc, err := time.LoadLocation("Asia/Makassar")
+	if err != nil {
+		t.Fatalf("error load location: %v", err)
+	}
+
+	_, err = service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
 		UserID: 1,
 		Text:   "gak tau",
+		Timezone: loc,
 	})
 
 	if err != nil {
