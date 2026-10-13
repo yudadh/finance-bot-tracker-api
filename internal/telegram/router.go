@@ -41,6 +41,17 @@ func (r *UpdateRouter) Handle(
 	reply := r.replies.For(tgBot)
 
 	if update.CallbackQuery != nil {
+		_, err := tgBot.AnswerCallbackQuery(ctx, &bot.AnswerCallbackQueryParams{
+			CallbackQueryID: update.CallbackQuery.ID,
+		})
+		if err != nil {
+			r.logger.ErrorContext(
+				ctx,
+				"failed to answer callback query",
+				"error", err,
+			)
+		}
+
 		r.callbacks.Handle(ctx, update.CallbackQuery, reply)
 		return
 	}
