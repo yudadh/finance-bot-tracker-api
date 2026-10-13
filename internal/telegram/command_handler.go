@@ -23,10 +23,10 @@ func NewCommandHandler(
 	logger *slog.Logger,
 ) *CommandHandler {
 	return &CommandHandler{
-		budgetHandler: budgetHandler,
+		budgetHandler:       budgetHandler,
 		conversationHandler: conversationHandler,
-		conversations: conversations,
-		logger:        logger,
+		conversations:       conversations,
+		logger:              logger,
 	}
 }
 
@@ -41,7 +41,6 @@ func (h *CommandHandler) HandleCommand(
 
 	switch DetectCommand(text) {
 	case CommandStart:
-		// h.SendTimezoneSelection(ctx, b, chatID)
 		reply.Text(ctx, chatID, welcomeMessage())
 		return true
 
@@ -51,14 +50,15 @@ func (h *CommandHandler) HandleCommand(
 
 	case CommandEdit:
 		h.conversationHandler.Start(
-			ctx, 
-			chatID, 
+			ctx,
+			chatID,
 			&ConversationState{
 				Type:       ConversationEditTransaction,
 				Step:       StepSelectDate,
 				UserID:     user.ID,
 				TelegramID: message.From.ID,
 				ExpiredAt:  time.Now().Add(5 * time.Minute),
+				EditState:  &EditStateValue{},
 			},
 			reply,
 			message,
