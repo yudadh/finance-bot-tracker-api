@@ -16,16 +16,20 @@ import (
 type fakeTransactionRepo struct {
 	created *domain.Transaction
 
+	id     uint64
+	userID uint64
+
 	findByUserIDWithCategoryCalls  int
-	userID                         uint64
 	startTransactionDate           time.Time
 	endTransactionDate             time.Time
 	findByUserIDWithCategoryResult []domain.Transaction
 	findByUserIDWithCategoryErr    error
 
-	id             uint64
 	findByIDResult *domain.Transaction
 	findByIDErr    error
+
+	FindByIDAndUserIDResult *domain.Transaction
+	FindByIDAndUserIDErr    error
 
 	updateTransactionInput *domain.Transaction
 	updateTransactionErr   error
@@ -52,6 +56,16 @@ func (f *fakeTransactionRepo) FindByUserIDWithCategory(
 func (f *fakeTransactionRepo) FindByID(ctx context.Context, id uint64) (*domain.Transaction, error) {
 	f.id = id
 	return f.findByIDResult, f.findByIDErr
+}
+
+func (f *fakeTransactionRepo) FindByIDAndUserID(
+	ctx context.Context,
+	id uint64,
+	userID uint64,
+) (*domain.Transaction, error) {
+	f.id = id
+	f.userID = userID
+	return f.FindByIDAndUserIDResult, f.FindByIDAndUserIDErr
 }
 
 func (f *fakeTransactionRepo) Update(ctx context.Context, transaction *domain.Transaction) error {
@@ -191,8 +205,8 @@ func TestTransactionService_CreateFromText_ParseErrorDoesNotCreateTransaction(t 
 	}
 
 	_, err = service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
-		UserID: 1,
-		Text:   "makan siang",
+		UserID:   1,
+		Text:     "makan siang",
 		Timezone: loc,
 	})
 
@@ -224,8 +238,8 @@ func TestTransactionService_CreateFromText_ParseErrorReturnSuccessFalse(t *testi
 	}
 
 	_, err = service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
-		UserID: 1,
-		Text:   "gak tau",
+		UserID:   1,
+		Text:     "gak tau",
 		Timezone: loc,
 	})
 
@@ -289,8 +303,8 @@ func TestTransactionService_CreateFromText_NoMatchingCategory(t *testing.T) {
 	}
 
 	_, err = service.CreateFromText(context.Background(), CreateTransactionFromTextInput{
-		UserID: 1,
-		Text:   "gak tau",
+		UserID:   1,
+		Text:     "gak tau",
 		Timezone: loc,
 	})
 
@@ -494,5 +508,109 @@ func TestFindTransactionsByUserID_EmptyResultIsNonNil(t *testing.T) {
 	}
 	if len(result) != 0 {
 		t.Fatalf("expected empty result, got %d items", len(result))
+	}
+}
+
+func TestFindTransactionByID_SuccessMapsTransaction(t *testing.T) {
+	transactionDate := time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)
+	repository := &fakeTransactionRepo{
+		findByIDResult: &domain.Transaction{
+			ID:              100,
+			UserID:          42,
+			Type:            domain.TransactionTypeExpense,
+			Amount:          12500,
+			Currency:        "IDR",
+			Description:     "lunch",
+			TransactionDate: transactionDate,
+			Source:          domain.TransactionSourceTelegram,
+		},
+	}
+	svc := NewTransactionService(
+		repository,
+		&fakeCategoryRepoForTransactionService{},
+		&fakeParserAttemptRepo{},
+		&fakeUserRepo{},
+		&fakeParser{},
+		nil,
+	)
+
+	result, err := svc.FindTransactionByID(context.Background(), 100)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if repository.id != 100 {
+		t.Fatalf("expected repository to receive id 100, got %d", repository.id)
+	}
+	if result.ID != 100 || result.UserID != 42 || result.Type != domain.TransactionTypeExpense || result.Amount != 12500 || result.Currency != "IDR" || result.Description != "lunch" || !result.TransactionDate.Equal(transactionDate) || result.Source != domain.TransactionSourceTelegram {
+		t.Fatalf("unexpected mapped transaction: %+v", result)
+	}
+}
+
+func TestFindTransactionByID_RepositoryError(t *testing.T) {
+	repositoryError := errors.New("database connection failed")
+	svc := NewTransactionService(
+		&fakeTransactionRepo{findByIDErr: repositoryError},
+		&fakeCategoryRepoForTransactionService{},
+		&fakeParserAttemptRepo{},
+		&fakeUserRepo{},
+		&fakeParser{},
+		nil,
+	)
+
+	_, err := svc.FindTransactionByID(context.Background(), 100)
+	if !errors.Is(err, repositoryError) {
+		t.Fatalf("expected wrapped repository error, got %v", err)
+	}
+}
+
+func TestFindTransactionByIDAndUserID_SuccessMapsTransaction(t *testing.T) {
+	transactionDate := time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)
+	repository := &fakeTransactionRepo{
+		FindByIDAndUserIDResult: &domain.Transaction{
+			ID:              100,
+			UserID:          42,
+			Type:            domain.TransactionTypeIncome,
+			Amount:          500000,
+			Currency:        "IDR",
+			Description:     "salary",
+			TransactionDate: transactionDate,
+			Source:          domain.TransactionSourceAdmin,
+		},
+	}
+	svc := NewTransactionService(
+		repository,
+		&fakeCategoryRepoForTransactionService{},
+		&fakeParserAttemptRepo{},
+		&fakeUserRepo{},
+		&fakeParser{},
+		nil,
+	)
+
+	result, err := svc.FindTransactionByIDAndUserID(context.Background(), 100, 42)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if repository.id != 100 || repository.userID != 42 {
+		t.Fatalf("expected repository to receive id=100 userID=42, got id=%d userID=%d", repository.id, repository.userID)
+	}
+	if result.ID != 100 || result.UserID != 42 || result.Type != domain.TransactionTypeIncome || result.Amount != 500000 || result.Currency != "IDR" || result.Description != "salary" || !result.TransactionDate.Equal(transactionDate) || result.Source != domain.TransactionSourceAdmin {
+		t.Fatalf("unexpected mapped transaction: %+v", result)
+	}
+}
+
+func TestFindTransactionByIDAndUserID_RepositoryError(t *testing.T) {
+	repositoryError := errors.New("transaction not found")
+	svc := NewTransactionService(
+		&fakeTransactionRepo{FindByIDAndUserIDErr: repositoryError},
+		&fakeCategoryRepoForTransactionService{},
+		&fakeParserAttemptRepo{},
+		&fakeUserRepo{},
+		&fakeParser{},
+		nil,
+	)
+
+	_, err := svc.FindTransactionByIDAndUserID(context.Background(), 100, 42)
+	if !errors.Is(err, repositoryError) {
+		t.Fatalf("expected wrapped repository error, got %v", err)
 	}
 }

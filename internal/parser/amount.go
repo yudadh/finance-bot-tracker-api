@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var amountPatternIDR = regexp.MustCompile(`(?i)\b(\d+(?:[.,]\d+)?)(rb|ribu|k|jt|juta)?\b`)
+var amountPatternIDR = regexp.MustCompile(`(?i)\b(\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)?\b`)
 
 func ParseAmountAndDescription(text string, currency string) (int64, string, error) {
 	var matches [][]int
@@ -20,7 +20,6 @@ func ParseAmountAndDescription(text string, currency string) (int64, string, err
 	}
 
 	match := matches[len(matches)-1]
-	// fmt.Println(match)
 	rawAmount := text[match[2]:match[3]]
 
 	suffix := ""
@@ -40,6 +39,33 @@ func ParseAmountAndDescription(text string, currency string) (int64, string, err
 	}
 	
 	return amount, description, nil
+}
+
+var amountOnlyPatternIDR = regexp.MustCompile(`(?i)\b(\d+(?:[.,]\d+)?)\s*(rb|ribu|k|jt|juta)?\b`)
+func ParseAmount(text string, currency string) (int64, error) {
+	var matches [][]int
+	if currency == "IDR" {
+		matches = amountOnlyPatternIDR.FindAllStringSubmatchIndex(text, -1)
+	}
+
+	if matches == nil {
+		return 0, ErrAmountNotFound
+	}
+
+	match := matches[len(matches)-1]
+	rawAmount := text[match[2]:match[3]]
+	
+	suffix := ""
+	if match[4] > 0 && match[5] > 0 {
+		suffix = text[match[4]:match[5]]
+	}
+
+	amount, err := normalizeAmount(rawAmount, suffix)
+	if err != nil {
+		return 0, err
+	}
+
+	return amount, nil
 }
 
 func normalizeAmount(raw string, suffix string) (int64, error) {

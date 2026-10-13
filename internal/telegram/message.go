@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/yudadh/finance-bot-tracker-api/internal/domain"
+	"github.com/yudadh/finance-bot-tracker-api/internal/parser"
 	"github.com/yudadh/finance-bot-tracker-api/internal/service"
 )
 
@@ -233,6 +234,10 @@ func parseErrorAmountMessage(cmdType CmdType) string {
 	}
 }
 
+func editAmountErrorMessage() string {
+	return "⚠️ Maaf, nominal transaksi yang anda masukkan tidak valid"
+}
+
 func unknownCommandMessage() string {
 	return `❓ Maaf, perintah tidak diketahui.
 
@@ -252,4 +257,48 @@ func cancelCommandMessage(cvType ConversationType) string {
 
 func timeoutConversationMessage() string {
 	return "⌛ Waktu percakapan telah habis, silahkan ulangi kembali atau coba menu lainnya"
+}
+
+func handleDateSelectionMessage() string {
+	return "Masukkan tanggal transaksi dari data yang akan di edit dengan format (DD-MM-YYYY), contoh (01-12-2012):"
+}
+
+func editTransactionInputMessage(field string) string {
+	switch parser.EditField(field) {
+	case parser.EditFieldDescription:
+		return "Masukkan deskripsi baru"
+	case parser.EditFieldAmount:
+		return "Masukkan jumlah nominal baru"
+	case parser.EditFieldBoth:
+		return "Masukkan deskripsi serta jumlah nominal baru dengan format (deskripsi nominal)"
+	default:
+		return ""
+	}
+}
+
+func editTransactionConfirmationMessage(field string, result *parser.EditTransactionIntent) string {
+	switch parser.EditField(field) {
+	case parser.EditFieldDescription:
+		return fmt.Sprintf(
+			"✅ Perubahan deskripsi menjadi:\n- %s\n\nAnda yakin ingin menyimpan perubahan?",
+			*result.Description,
+		)
+	case parser.EditFieldAmount:
+		return fmt.Sprintf(
+			"✅ Perubahan jumlah nominal menjadi:\n- %s\n\nAnda yakin ingin menyimpan perubahan?",
+			formatIDR(uint64(*result.Amount)),
+		)
+	case parser.EditFieldBoth:
+		return fmt.Sprintf(
+			"✅ Perubahan deskripsi dan jumlah nominal menjadi:\n- %s %s\n\nAnda yakin ingin menyimpan perubahan?",
+			*result.Description,
+			formatIDR(uint64(*result.Amount)),
+		)
+	default:
+		return ""
+	}
+}
+
+func editTransactionSuccessMessage() string {
+	return "✅ Edit transaksi berhasil!"
 }

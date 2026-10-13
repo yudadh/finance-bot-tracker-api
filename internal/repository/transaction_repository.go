@@ -107,3 +107,44 @@ func (r *TransactionRepository) FindByUserIDWithCategory(
 	return transactions, nil
 }
 
+func (r *TransactionRepository) FindByID(
+	ctx context.Context, 
+	id uint64,
+) (*domain.Transaction, error) {
+	var transaction *domain.Transaction
+
+	err := r.db.
+		WithContext(ctx).
+		Preload("Category").
+		Where("id = ?", id).
+		Find(&transaction).
+		Error
+
+	if err != nil {
+		return nil, translateError(err)
+	}
+
+	return transaction, nil
+}
+
+func (r *TransactionRepository) FindByIDAndUserID(
+	ctx context.Context,
+	id uint64,
+	userID uint64,
+) (*domain.Transaction, error) {
+	var transaction *domain.Transaction
+
+	err := r.db.
+		WithContext(ctx).
+		Preload("Category").
+		Where("id = ?", id).
+		Where("user_id = ?", userID).
+		Find(&transaction).
+		Error
+	
+	if err != nil {
+		return nil, translateError(err)
+	}
+
+	return transaction, nil
+}

@@ -24,6 +24,29 @@ type CreateTransactionFromTextResult struct {
 	CategoryName string
 }
 
+type ParseEditTransactionFromTextInput struct {
+	TransactionID uint64
+	UserID        uint64
+	Text          string
+	Currency      string
+	FieldType     string
+}
+
+type ParseEditTransactionFromTextResult struct {
+	EditTransactionIntent *parser.EditTransactionIntent
+}
+
+type UpdateTransactionFromChatInput struct {
+	TransactionID uint64
+	UserID        uint64
+	Value         *parser.EditTransactionIntent
+	FieldType     string
+}
+
+type UpdateTransactionFromChatResult struct {
+	ID uint64
+}
+
 type transactionRepository interface {
 	Create(ctx context.Context, transaction *domain.Transaction) error
 	FindByUserIDWithCategory(
@@ -32,6 +55,16 @@ type transactionRepository interface {
 		startTransactionDate time.Time,
 		endTransactionDate time.Time,
 	) ([]domain.Transaction, error)
+	FindByID(
+		ctx context.Context,
+		id uint64,
+	) (*domain.Transaction, error)
+	FindByIDAndUserID(
+		ctx context.Context,
+		id uint64,
+		userID uint64,
+	) (*domain.Transaction, error)
+	Update(ctx context.Context, transaction *domain.Transaction) error
 }
 
 type categoryRepository interface {
@@ -195,7 +228,7 @@ func normalizeDateToUTC(t time.Time, loc *time.Location) time.Time {
 		year,
 		month,
 		day,
-		0,0,0,0,
+		0, 0, 0, 0,
 		time.UTC,
 	)
 }
@@ -256,4 +289,182 @@ func (s *TransactionService) FindTransactionsByUserID(
 	}
 
 	return transactions, nil
+}
+
+func (s *TransactionService) FindTransactionByID(
+	ctx context.Context,
+	id uint64,
+) (*TransactionResult, error) {
+	result, err := s.transactionRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"load transaction by id: %w",
+			err,
+		)
+	}
+
+	return &TransactionResult{
+		ID:              result.ID,
+		UserID:          result.UserID,
+		Type:            result.Type,
+		Amount:          result.Amount,
+		Currency:        result.Currency,
+		Description:     result.Description,
+		TransactionDate: result.TransactionDate,
+		Source:          result.Source,
+	}, nil
+}
+
+func (s *TransactionService) FindTransactionByIDAndUserID(
+	ctx context.Context,
+	id uint64,
+	userID uint64,
+) (*TransactionResult, error) {
+	result, err := s.transactionRepo.FindByIDAndUserID(ctx, id, userID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"load transaction by id and user_id: %w",
+			err,
+		)
+	}
+
+	return &TransactionResult{
+		ID:              result.ID,
+		UserID:          result.UserID,
+		Type:            result.Type,
+		Amount:          result.Amount,
+		Currency:        result.Currency,
+		Description:     result.Description,
+		TransactionDate: result.TransactionDate,
+		Source:          result.Source,
+	}, nil
+}
+
+func (s *TransactionService) ParseEditTransactionFromText(
+	ctx context.Context,
+	input ParseEditTransactionFromTextInput,
+) (*ParseEditTransactionFromTextResult, error) {
+	fieldType := parser.EditField(input.FieldType)
+
+	var categories []domain.Category
+	var categoryRules []parser.CategoryRule
+
+	if fieldType == parser.EditFieldDescription || fieldType == parser.EditFieldBoth {
+		results, err := s.categoryRepo.FindAllWithoutPagination(ctx)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"load categories: %w",
+				err,
+			)
+		}
+
+		categories = results
+		categoryRules = buildCategoryRules(categories)
+	}
+
+	intent, err := s.parser.ParseEdit(parser.ParseEditInput{
+		Text:       input.Text,
+		FieldType:  fieldType,
+		Currency:   input.Currency,
+		Categories: categoryRules,
+	})
+
+	parserAttempt := &domain.ParserAttempt{
+		UserID:     input.UserID,
+		RawText:    input.Text,
+		ParserType: domain.ParserTypeRuleBased,
+		Success:    err == nil,
+	}
+
+	if err != nil {
+		if fieldType == parser.EditFieldBoth {
+			errMessage := err.Error()
+			parserAttempt.ErrorMessage = &errMessage
+			if errParserAttempt := s.parserAttemptRepo.Create(ctx, parserAttempt); errParserAttempt != nil && s.logger != nil {
+				s.logger.ErrorContext(ctx, "failed to create parserAttempt", "error", errParserAttempt)
+			}
+		}
+
+		return nil, fmt.Errorf(
+			"parse edit transaction: %w",
+			err,
+		)
+	}
+
+	if fieldType == parser.EditFieldBoth {
+		parserAttempt.Confidence = intent.Confidence
+		if errParserAttempt := s.parserAttemptRepo.Create(ctx, parserAttempt); errParserAttempt != nil && s.logger != nil {
+			s.logger.ErrorContext(ctx, "failed to create parserAttempt", "error", errParserAttempt)
+		}
+	}
+
+	return &ParseEditTransactionFromTextResult{
+		EditTransactionIntent: intent,
+	}, nil
+}
+
+func (s *TransactionService) UpdateTransactionFromChat(
+	ctx context.Context,
+	input UpdateTransactionFromChatInput,
+) (*UpdateTransactionFromChatResult, error) {
+	fieldType := parser.EditField(input.FieldType)
+	var categories []domain.Category
+
+	if fieldType == parser.EditFieldDescription || fieldType == parser.EditFieldBoth {
+		results, err := s.categoryRepo.FindAllWithoutPagination(ctx)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"load categories: %w",
+				err,
+			)
+		}
+
+		categories = results
+	}
+
+	result, err := s.transactionRepo.FindByID(ctx, input.TransactionID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"load transaction by id: %w",
+			err,
+		)
+	}
+
+	if result.UserID != input.UserID {
+		return nil, domain.ErrNotFound
+	}
+
+	intent := input.Value
+
+	switch fieldType {
+	case parser.EditFieldDescription:
+
+		categoryID := findCategoryID(*intent.CategoryName, *intent.Type, categories)
+
+		result.Description = *intent.Description
+		result.CategoryID = categoryID
+		result.Type = *intent.Type
+	case parser.EditFieldAmount:
+		result.Amount = *intent.Amount
+
+	case parser.EditFieldBoth:
+		categoryID := findCategoryID(*intent.CategoryName, *intent.Type, categories)
+
+		result.Description = *intent.Description
+		result.CategoryID = categoryID
+		result.Type = *intent.Type
+		result.Amount = *intent.Amount
+	}
+
+	result.Currency = intent.Currency
+
+	err = s.transactionRepo.Update(ctx, result)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"update transaction: %w",
+			err,
+		)
+	}
+
+	return &UpdateTransactionFromChatResult{ID: result.ID}, nil
 }
