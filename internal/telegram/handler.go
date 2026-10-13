@@ -15,7 +15,7 @@ type budgetService interface {
 
 type transactionService interface {
 	transactionFinderOrCreator
-	transactionFinder
+	editTransactionService
 }
 
 type BotHandler struct {
