@@ -78,7 +78,7 @@ func selectFieldToEditKeyboardMarkup() models.InlineKeyboardMarkup {
 	return models.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}
 }
 
-func editConfirmationKeyboardMarkup() models.InlineKeyboardMarkup {
+func confirmationKeyboardMarkup() models.InlineKeyboardMarkup {
 	inlineKeyboard := [][]models.InlineKeyboardButton{
 		{
 			{

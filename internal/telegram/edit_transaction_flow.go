@@ -291,7 +291,7 @@ func (f *EditTransactionFlow) handleInputValue(
 	state.Step = StepConfirm
 	state.ExpiredAt = state.ExpiredAt.Add(2 * time.Minute)
 
-	reply.Inline(ctx, chatID, editTransactionConfirmationMessage(editState.Field, intent.EditTransactionIntent), editConfirmationKeyboardMarkup())
+	reply.Inline(ctx, chatID, editTransactionConfirmationMessage(editState.Field, intent.EditTransactionIntent), confirmationKeyboardMarkup())
 }
 
 func (f *EditTransactionFlow) handleConfirmEditTransaction(
