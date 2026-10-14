@@ -33,6 +33,9 @@ type fakeTransactionRepo struct {
 
 	updateTransactionInput *domain.Transaction
 	updateTransactionErr   error
+
+	hardDeleteTransactionInput *domain.Transaction
+	hardDeleteTransactionErr error
 }
 
 func (f *fakeTransactionRepo) Create(ctx context.Context, transaction *domain.Transaction) error {
@@ -71,6 +74,14 @@ func (f *fakeTransactionRepo) FindByIDAndUserID(
 func (f *fakeTransactionRepo) Update(ctx context.Context, transaction *domain.Transaction) error {
 	f.updateTransactionInput = transaction
 	return f.updateTransactionErr
+}
+
+func (f *fakeTransactionRepo) HardDelete(
+	ctx context.Context,
+	transaction *domain.Transaction,
+) error {
+	f.hardDeleteTransactionInput = transaction
+	return f.hardDeleteTransactionErr
 }
 
 type fakeCategoryRepoForTransactionService struct {
@@ -610,6 +621,77 @@ func TestFindTransactionByIDAndUserID_RepositoryError(t *testing.T) {
 	)
 
 	_, err := svc.FindTransactionByIDAndUserID(context.Background(), 100, 42)
+	if !errors.Is(err, repositoryError) {
+		t.Fatalf("expected wrapped repository error, got %v", err)
+	}
+}
+
+func TestHardDeleteTransaction_Success(t *testing.T) {
+	transactionDate := time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)
+	repository := &fakeTransactionRepo{
+		FindByIDAndUserIDResult: &domain.Transaction{
+			ID:              100,
+			UserID:          42,
+			Type:            domain.TransactionTypeIncome,
+			Amount:          500000,
+			Currency:        "IDR",
+			Description:     "salary",
+			TransactionDate: transactionDate,
+			Source:          domain.TransactionSourceAdmin,
+		},
+	}
+
+	svc := NewTransactionService(
+		repository,
+		&fakeCategoryRepoForTransactionService{},
+		&fakeParserAttemptRepo{},
+		&fakeUserRepo{},
+		&fakeParser{},
+		nil,
+	)
+
+	result, err := svc.HardDeleteByID(context.Background(), 100, 42)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if repository.id != 100 || repository.userID != 42 {
+		t.Fatalf("expected repository to receive id=100 userID=42, got id=%d userID=%d", repository.id, repository.userID)
+	}
+	if result.ID != 100 || result.Amount != 500000 || result.Description != "salary" {
+		t.Fatalf("unexpected mapped transaction: %+v", result)
+	}
+
+}
+
+func TestHardDeleteByID_TransactionNotFound(t *testing.T) {
+	repositoryError := domain.ErrNotFound
+	svc := NewTransactionService(
+		&fakeTransactionRepo{FindByIDAndUserIDErr: repositoryError},
+		&fakeCategoryRepoForTransactionService{},
+		&fakeParserAttemptRepo{},
+		&fakeUserRepo{},
+		&fakeParser{},
+		nil,
+	)
+
+	_, err := svc.HardDeleteByID(context.Background(), 100, 42)
+	if !errors.Is(err, repositoryError) {
+		t.Fatalf("expected wrapped repository error, got %v", err)
+	}
+}
+
+func TestHardDeleteByID_RepositoryError(t *testing.T) {
+	repositoryError := errors.New("database connection failed")
+	svc := NewTransactionService(
+		&fakeTransactionRepo{hardDeleteTransactionErr: repositoryError},
+		&fakeCategoryRepoForTransactionService{},
+		&fakeParserAttemptRepo{},
+		&fakeUserRepo{},
+		&fakeParser{},
+		nil,
+	)
+
+	_, err := svc.HardDeleteByID(context.Background(), 100, 42)
 	if !errors.Is(err, repositoryError) {
 		t.Fatalf("expected wrapped repository error, got %v", err)
 	}

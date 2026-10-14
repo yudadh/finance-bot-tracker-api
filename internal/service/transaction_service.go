@@ -47,6 +47,12 @@ type UpdateTransactionFromChatResult struct {
 	ID uint64
 }
 
+type DeleteTransactionResult struct {
+	ID uint64
+	Description string
+	Amount int64
+}
+
 type transactionRepository interface {
 	Create(ctx context.Context, transaction *domain.Transaction) error
 	FindByUserIDWithCategory(
@@ -65,6 +71,10 @@ type transactionRepository interface {
 		userID uint64,
 	) (*domain.Transaction, error)
 	Update(ctx context.Context, transaction *domain.Transaction) error
+	HardDelete(
+		ctx context.Context,
+		transaction *domain.Transaction,
+	) error
 }
 
 type categoryRepository interface {
@@ -467,4 +477,32 @@ func (s *TransactionService) UpdateTransactionFromChat(
 	}
 
 	return &UpdateTransactionFromChatResult{ID: result.ID}, nil
+}
+
+func (s *TransactionService) HardDeleteByID(
+	ctx context.Context,
+	id uint64,
+	userID uint64,
+) (*DeleteTransactionResult, error) {
+	result, err := s.transactionRepo.FindByIDAndUserID(ctx, id, userID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"load transaction by id and user_id: %w",
+			err,
+		)
+	}
+
+	err = s.transactionRepo.HardDelete(ctx, result)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"hard delete transaction: %w",
+			err,
+		)
+	}
+
+	return &DeleteTransactionResult{
+		ID: result.ID,
+		Description: result.Description,
+		Amount: result.Amount,
+	}, nil
 }

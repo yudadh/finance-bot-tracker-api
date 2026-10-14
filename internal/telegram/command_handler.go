@@ -65,6 +65,23 @@ func (h *CommandHandler) HandleCommand(
 		)
 		return true
 
+	case CommandDelete:
+		h.conversationHandler.Start(
+			ctx,
+			chatID,
+			&ConversationState{
+				Type:       ConversationDeleteTransaction,
+				Step:       StepSelectDate,
+				UserID:     user.ID,
+				TelegramID: message.From.ID,
+				ExpiredAt:  time.Now().Add(5 * time.Minute),
+				DeleteState:  &DeleteStateValue{},
+			},
+			reply,
+			message,
+		)
+		return true
+
 	case CommandBudget:
 		h.budgetHandler.handleBudgetCommand(ctx, chatID, reply, *user)
 		return true

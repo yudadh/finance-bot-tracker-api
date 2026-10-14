@@ -32,6 +32,7 @@ type EditStateValue struct {
 }
 
 type DeleteStateValue struct {
+	DateText string
 	TransactionID uint64
 }
 

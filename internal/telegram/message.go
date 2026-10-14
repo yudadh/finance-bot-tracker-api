@@ -302,3 +302,7 @@ func editTransactionConfirmationMessage(field string, result *parser.EditTransac
 func editTransactionSuccessMessage() string {
 	return "✅ Edit transaksi berhasil!"
 }
+
+func deleteTransactionSuccessMessage() string {
+	return "✅ hapus transaksi berhasil!"
+}

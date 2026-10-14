@@ -16,6 +16,7 @@ type budgetService interface {
 type transactionService interface {
 	transactionFinderOrCreator
 	editTransactionService
+	deleteTransactionService
 }
 
 type BotHandler struct {
@@ -35,7 +36,7 @@ func NewBotHandler(
 	transactionHandler := NewTransactionHandler(transactionService, budgetService, logger)
 
 	editTransactionFlow := NewEditTransactionFlow(transactionService, conversations, logger)
-	deleteTransactionFlow := NewDeleteTransactionFlow(conversations)
+	deleteTransactionFlow := NewDeleteTransactionFlow(transactionService, conversations)
 	conversationHandler := NewConversationHandler(editTransactionFlow, deleteTransactionFlow, conversations)
 	commandHandler := NewCommandHandler(budgetHandler, conversationHandler, conversations, logger)
 	callbackHandler := NewCallbackHandler(conversationHandler, conversations)
