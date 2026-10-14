@@ -3,14 +3,12 @@ package telegram
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-telegram/bot/models"
 	"github.com/yudadh/finance-bot-tracker-api/internal/parser"
 	"github.com/yudadh/finance-bot-tracker-api/internal/service"
 )
@@ -136,7 +134,7 @@ func (f *EditTransactionFlow) Back(
 		f.handleDateSelection(ctx, chatID, reply, state, editState.DateText)
 	case StepInputValue:
 		state.Step = StepSelectField
-		reply.Inline(ctx, chatID, "Pilih bagian yang ingin di edit", selectFieldKeyboardMarkup())
+		reply.Inline(ctx, chatID, "Pilih bagian yang ingin di edit", selectFieldToEditKeyboardMarkup())
 	case StepConfirm:
 		state.Step = StepInputValue
 		reply.Text(ctx, chatID, editTransactionInputMessage(editState.Field))
@@ -182,7 +180,7 @@ func (f *EditTransactionFlow) handleDateSelection(
 		ctx,
 		chatID,
 		"Pilih salah satu transaksi",
-		createTransactionKeyboardMarkup(result),
+		createTransactionKeyboardMarkup(result, state.Type),
 	)
 }
 
@@ -209,7 +207,7 @@ func (f *EditTransactionFlow) handleTransactionSelected(
 	state.Step = StepSelectField
 	state.ExpiredAt = state.ExpiredAt.Add(2 * time.Minute)
 
-	reply.Inline(ctx, chatID, "Pilih bagian yang ingin di edit", selectFieldKeyboardMarkup())
+	reply.Inline(ctx, chatID, "Pilih bagian yang ingin di edit", selectFieldToEditKeyboardMarkup())
 }
 
 func (f *EditTransactionFlow) handleFieldSelection(
@@ -327,90 +325,4 @@ func (f *EditTransactionFlow) handleConfirmEditTransaction(
 
 	f.conversations.Delete(chatID)
 	reply.Text(ctx, chatID, editTransactionSuccessMessage())
-}
-
-func createTransactionKeyboardMarkup(rows []service.TransactionResult) models.InlineKeyboardMarkup {
-	var inlineKeyboard [][]models.InlineKeyboardButton
-
-	for _, row := range rows {
-		inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
-			{
-				Text:         fmt.Sprintf("%s - %d", row.Description, row.Amount),
-				CallbackData: fmt.Sprintf("edit:%d", row.ID),
-			},
-		})
-	}
-
-	inlineKeyboard = append(inlineKeyboard, []models.InlineKeyboardButton{
-		{
-			Text:         "Kembali",
-			CallbackData: "back",
-		},
-		{
-			Text:         "Batal",
-			CallbackData: "cancel",
-		},
-	})
-
-	return models.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}
-}
-
-func selectFieldKeyboardMarkup() models.InlineKeyboardMarkup {
-	inlineKeyboard := [][]models.InlineKeyboardButton{
-		{
-			{
-				Text:         "Deskripsi",
-				CallbackData: fmt.Sprintf("edit:%s", parser.EditFieldDescription),
-			},
-		},
-		{
-			{
-				Text:         "Jumlah Nominal",
-				CallbackData: fmt.Sprintf("edit:%s", parser.EditFieldAmount),
-			},
-		},
-		{
-			{
-				Text:         "Deskripsi & Jumlah Nominal",
-				CallbackData: fmt.Sprintf("edit:%s", parser.EditFieldBoth),
-			},
-		},
-		{
-			{
-				Text:         "Kembali",
-				CallbackData: "back",
-			},
-			{
-				Text:         "Batal",
-				CallbackData: "cancel",
-			},
-		},
-	}
-
-	return models.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}
-}
-
-func editConfirmationKeyboardMarkup() models.InlineKeyboardMarkup {
-	inlineKeyboard := [][]models.InlineKeyboardButton{
-		{
-			{
-				Text:         "Kembali",
-				CallbackData: "back",
-			},
-		},
-		{
-			{
-				Text:         "Simpan",
-				CallbackData: "save",
-			},
-		},
-		{
-			{
-				Text:         "Batal",
-				CallbackData: "cancel",
-			},
-		},
-	}
-
-	return models.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}
 }
