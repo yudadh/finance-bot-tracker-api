@@ -88,7 +88,7 @@ func confirmationKeyboardMarkup() models.InlineKeyboardMarkup {
 		},
 		{
 			{
-				Text:         "Simpan",
+				Text:         "Yakin",
 				CallbackData: "save",
 			},
 		},
