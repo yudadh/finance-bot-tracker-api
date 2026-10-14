@@ -148,3 +148,16 @@ func (r *TransactionRepository) FindByIDAndUserID(
 
 	return transaction, nil
 }
+
+func (r *TransactionRepository) HardDelete(
+	ctx context.Context,
+	transaction *domain.Transaction,
+) error {
+	err := r.db.
+		WithContext(ctx).
+		Unscoped().
+		Delete(transaction).
+		Error
+	
+	return translateError(err)
+}
